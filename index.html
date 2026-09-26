@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comfimap</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="panel">
+    <h1>Comfimap</h1>
+    <p>Find the coolest walk in NYC.</p>
+
+    <input id="start" type="text" placeholder="Start address" />
+    <input id="end" type="text" placeholder="End address" />
+    <button id="routeBtn">Route me!</button>
+
+    <p id="message"></p>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="time-bar">
+    <select id="month">
+      <option value="6">June</option>
+      <option value="7" selected>July</option>
+      <option value="8">August</option>
+    </select>
+
+    <div class="ruler-wrap">
+      <div class="ruler-arrow"></div>
+      <div class="ruler" id="ruler"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
