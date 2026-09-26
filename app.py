@@ -1,4 +1,4 @@
-"""Full-screen walking map. Shadows come from leaflet-shadow-simulator."""
+"""Full-screen walking map for shorter and cooler Financial District walks."""
 
 import gc
 import threading
