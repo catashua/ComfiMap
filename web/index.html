@@ -334,7 +334,16 @@
             hour: slot.hour,
           }),
         });
-        const payload = await response.json();
+        const raw = await response.text();
+        if (!raw) {
+          throw new Error("The server restarted. Wait about 20 seconds, then press Find walks again.");
+        }
+        let payload;
+        try {
+          payload = JSON.parse(raw);
+        } catch (parseError) {
+          throw new Error("The server restarted. Wait about 20 seconds, then press Find walks again.");
+        }
         if (!response.ok) throw new Error(payload.detail || "Could not find walks");
         routeData = payload.routes;
         const balance = document.getElementById("balance");
