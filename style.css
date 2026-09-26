@@ -1,0 +1,163 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+#map {
+  height: 100vh;
+  width: 100%;
+}
+
+/* ---------- Top-left panel ---------- */
+
+.panel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  width: 300px;
+  max-width: calc(100% - 40px);
+  box-sizing: border-box;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.panel h1 { margin: 0; font-size: 22px; }
+.panel p  { color: #666; font-size: 14px; }
+
+.panel input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.panel button {
+  width: 100%;
+  padding: 12px;
+  background: #0d9488;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.panel button:hover { background: #0f766e; }
+
+/* ---------- Bottom time bar ---------- */
+
+.time-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 520px;
+  max-width: calc(100% - 40px);
+  box-sizing: border-box;
+  background: white;
+  padding: 10px 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.time-bar select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+}
+
+.ruler-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* the fixed arrow in the middle */
+.ruler-arrow {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 9px solid #0d9488;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.ruler {
+  display: flex;
+  height: 50px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  /* fades the numbers out at the edges */
+  mask-image: linear-gradient(to right, transparent, black 25%, black 75%, transparent);
+}
+.ruler::-webkit-scrollbar { display: none; }
+.ruler.dragging { scroll-snap-type: none; cursor: grabbing; }
+
+.ruler-spacer { flex: 0 0 auto; }
+
+.tick {
+  flex: 0 0 70px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  box-sizing: border-box;
+  font-size: 13px;
+  color: #999;
+  scroll-snap-align: center;
+  transition: color 0.15s, font-size 0.15s;
+}
+
+/* big tick on each hour */
+.tick::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 14px;
+  background: #bbb;
+}
+
+/* small tick on each half hour */
+.tick::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 1px;
+  height: 7px;
+  background: #ddd;
+}
+
+.tick.active {
+  color: #0d9488;
+  font-weight: 700;
+  font-size: 15px;
+}
+.tick.active::before { background: #0d9488; height: 18px; }
+
+/* On small screens, lift the zoom buttons so they sit above the time bar */
+@media (max-width: 700px) {
+  .leaflet-bottom.leaflet-right { bottom: 90px; }
+}
