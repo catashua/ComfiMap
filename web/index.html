@@ -8,26 +8,21 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
     body { font-family: "Avenir Next", "Segoe UI", sans-serif; color: #142033; }
-    .panel, .timebar {
+    .panel {
       position: absolute;
       z-index: 1000;
+      top: 14px;
+      left: 14px;
+      width: min(360px, calc(100vw - 28px));
+      padding: 14px 14px 12px;
       background: rgba(255, 255, 255, 0.94);
       border-radius: 18px;
       box-shadow: 0 12px 40px rgba(7, 16, 38, 0.22);
     }
-    .panel { top: 14px; left: 14px; width: min(360px, calc(100vw - 28px)); padding: 14px 14px 12px; }
-    .timebar {
-      left: 50%;
-      bottom: 16px;
-      transform: translateX(-50%);
-      width: min(680px, calc(100vw - 28px));
-      padding: 12px 16px 14px;
-      box-sizing: border-box;
-    }
     h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: -0.03em; }
     .sub { margin: 0 0 10px; color: #526074; font-size: 13px; line-height: 1.35; }
     label { display: block; font-size: 12px; font-weight: 650; margin: 8px 0 4px; }
-    input[type="text"], input[type="date"], input[type="password"] {
+    input[type="text"], select {
       width: 100%;
       box-sizing: border-box;
       border: 1px solid #d5dbe6;
@@ -35,6 +30,7 @@
       padding: 8px 10px;
       font: inherit;
       font-size: 14px;
+      background: white;
     }
     .row { display: flex; gap: 8px; }
     .row > div { flex: 1; }
@@ -46,46 +42,36 @@
       padding: 9px 12px;
     }
     button.primary { width: 100%; margin-top: 10px; background: #01112f; color: white; font-weight: 700; }
-    button.ghost { background: #eef2f7; color: #142033; font-weight: 650; }
     button:disabled { opacity: 0.55; cursor: wait; }
-    .clock { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-    .clock strong { font-size: 22px; letter-spacing: -0.03em; }
-    .clock span { color: #526074; font-size: 13px; }
     input[type="range"] { width: 100%; accent-color: #01112f; }
-    .actions { display: flex; gap: 8px; margin-top: 8px; }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
     .stat { background: #f4f7fb; border-radius: 12px; padding: 8px; }
     .stat b { display: block; font-size: 14px; }
     .stat span { color: #526074; font-size: 11px; }
     .msg { min-height: 1.2em; margin: 8px 0 0; font-size: 13px; color: #526074; }
     .msg.error { color: #9b1c1c; }
-    #loader {
-      position: absolute;
-      z-index: 1000;
-      top: 14px;
-      right: 14px;
-      background: rgba(1, 17, 47, 0.88);
-      color: white;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      display: none;
-    }
-    .keyrow { margin-top: 8px; }
-    .keyrow summary { cursor: pointer; color: #526074; font-size: 12px; }
     #routes { display: none; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div id="loader">Loading shade</div>
   <aside class="panel">
     <h1>ComfiMap</h1>
-    <p class="sub">Shade is the sun right now. The slider picks a walk that trades a little distance for less heat.</p>
+    <p class="sub">The slider picks a walk that trades a little distance for less heat.</p>
     <label for="origin">Start</label>
     <input id="origin" type="text" value="Battery Park, New York" />
     <label for="destination">Destination</label>
     <input id="destination" type="text" value="City Hall, New York" />
+    <div class="row">
+      <div>
+        <label for="month">Month</label>
+        <select id="month"></select>
+      </div>
+      <div>
+        <label for="hour">Hour</label>
+        <select id="hour"></select>
+      </div>
+    </div>
     <button id="find" class="primary" type="button">Find walks</button>
     <div id="routes">
       <label for="balance">Balance distance and heat</label>
@@ -97,96 +83,52 @@
       </div>
     </div>
     <p id="status" class="msg"></p>
-    <details class="keyrow">
-      <summary>ShadeMap key</summary>
-      <p class="sub">Shadows use leaflet-shadow-simulator. A key from <a href="https://shademap.app/about/" target="_blank" rel="noreferrer">shademap.app/about</a> is required. This box starts with the key published in that library’s example.</p>
-      <input id="apikey" type="password" autocomplete="off" />
-      <button id="savekey" class="ghost" type="button">Use this key</button>
-    </details>
   </aside>
-  <div class="timebar">
-    <div class="clock">
-      <strong id="timelabel">3:23 PM</strong>
-      <span id="datelabel"></span>
-    </div>
-    <input id="timeslider" type="range" min="0" max="1439" value="923" />
-    <div class="actions">
-      <input id="day" type="date" value="2026-09-26" />
-      <button id="play" class="ghost" type="button">Play</button>
-    </div>
-  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
-  <script src="https://unpkg.com/leaflet-shadow-simulator/dist/leaflet-shadow-simulator.umd.min.js"></script>
   <script>
-    // Key published in the library example at examples/map.html so the demo can draw shade.
-    const EXAMPLE_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InRwcGlvdHJvd3NraUBzaGFkZW1hcC5hcHAiLCJjcmVhdGVkIjoxNjYyNDkzMDY2Nzk0LCJpYXQiOjE2NjI0OTMwNjZ9.ovCrLTYsdKFTF6TW3DuODxCaAtGQ3qhcmqj3DWcol5g";
     const START = { lat: 40.71427, lng: -74.00597, zoom: 15 };
-    const OPENING = new Date(1790450597652);
-
+    const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const statusEl = document.getElementById("status");
-    const loaderEl = document.getElementById("loader");
-    const timeSlider = document.getElementById("timeslider");
-    const timeLabel = document.getElementById("timelabel");
-    const dateLabel = document.getElementById("datelabel");
-    const dayInput = document.getElementById("day");
-    const keyInput = document.getElementById("apikey");
-    keyInput.value = localStorage.getItem("shademapKey") || EXAMPLE_KEY;
+    const monthSelect = document.getElementById("month");
+    const hourSelect = document.getElementById("hour");
 
-    let shadeDate = new Date(OPENING.getTime());
-    let shadeMap = null;
-    let playing = null;
+    let options = { months: {} };
     let routeData = [];
     let routeLayers = [];
-    let options = { months: {} };
 
-    function nycParts(date) {
-      const fmt = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        hourCycle: "h23",
-        weekday: "short",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const parts = {};
-      for (const part of fmt.formatToParts(date)) {
-        if (part.type !== "literal") parts[part.type] = part.value;
+    function hourLabel(hour) {
+      if (hour === 0) return "12 AM";
+      if (hour < 12) return `${hour} AM`;
+      if (hour === 12) return "12 PM";
+      return `${hour - 12} PM`;
+    }
+
+    function fillHours() {
+      const hours = options.months[monthSelect.value] || [];
+      const previous = hourSelect.value;
+      hourSelect.innerHTML = "";
+      for (const hour of hours) {
+        const option = document.createElement("option");
+        option.value = String(hour);
+        option.textContent = hourLabel(hour);
+        hourSelect.appendChild(option);
       }
-      return parts;
+      if (hours.map(String).includes(previous)) hourSelect.value = previous;
+      else if (hours.includes(14)) hourSelect.value = "14";
     }
 
-    function zonedDate(year, month, day, hour, minute) {
-      const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      const parts = nycParts(utcGuess);
-      const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
-      return new Date(utcGuess.getTime() - (asUtc - utcGuess.getTime()));
-    }
-
-    function paintClock() {
-      const parts = nycParts(shadeDate);
-      const hour = +parts.hour;
-      const minute = +parts.minute;
-      const suffix = hour >= 12 ? "PM" : "AM";
-      const hour12 = hour % 12 || 12;
-      timeLabel.textContent = `${hour12}:${String(minute).padStart(2, "0")} ${suffix}`;
-      dateLabel.textContent = `${parts.weekday} ${parts.month}/${parts.day}/${parts.year} · New York`;
-      timeSlider.value = String(hour * 60 + minute);
-      dayInput.value = `${parts.year}-${parts.month}-${parts.day}`;
-    }
-
-    function applyDate(next) {
-      shadeDate = next;
-      paintClock();
-      if (shadeMap) shadeMap.setDate(shadeDate);
-    }
-
-    function setClockMinutes(total) {
-      const parts = nycParts(shadeDate);
-      applyDate(zonedDate(+parts.year, +parts.month, +parts.day, Math.floor(total / 60), total % 60));
+    function fillMonths() {
+      monthSelect.innerHTML = "";
+      const months = Object.keys(options.months).map(Number).sort((a, b) => a - b);
+      for (const month of months) {
+        const option = document.createElement("option");
+        option.value = String(month);
+        option.textContent = MONTH_NAMES[month] || String(month);
+        monthSelect.appendChild(option);
+      }
+      if (months.includes(7)) monthSelect.value = "7";
+      fillHours();
     }
 
     const map = L.map("map", { zoomControl: false }).setView([START.lat, START.lng], START.zoom);
@@ -195,100 +137,6 @@
       attribution: "&copy; OpenStreetMap",
     }).addTo(map);
     L.control.zoom({ position: "bottomright" }).addTo(map);
-
-    const featureCache = new Map();
-    async function loadBuildings() {
-      if (map.getZoom() <= 15) return [];
-      const bounds = map.getBounds();
-      const south = bounds.getSouth();
-      const west = bounds.getWest();
-      const north = bounds.getNorth();
-      const east = bounds.getEast();
-      const key = [south, west, north, east].map((n) => n.toFixed(3)).join(",");
-      if (featureCache.has(key)) return featureCache.get(key);
-      const query = `[out:json][timeout:25];(way["building"](${south},${west},${north},${east}););out body;>;out skel qt;`;
-      const pending = fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query))
-        .then((response) => response.json())
-        .then((json) => {
-          const geojson = osmtogeojson(json);
-          return geojson.features.filter((feature) => {
-            const kind = feature.geometry && feature.geometry.type;
-            if (kind !== "Polygon" && kind !== "MultiPolygon") return false;
-            const props = feature.properties || (feature.properties = {});
-            let height = parseFloat(String(props.height || props["building:height"] || "").replace(/[^\d.]/g, ""));
-            if (!height) {
-              const levels = parseFloat(props["building:levels"]);
-              height = levels > 0 ? levels * 3.2 : 18;
-            }
-            props.height = height;
-            props.render_height = height;
-            return true;
-          });
-        })
-        .catch((error) => {
-          featureCache.delete(key);
-          console.error(error);
-          return [];
-        });
-      featureCache.set(key, pending);
-      return pending;
-    }
-
-    function startShade(apiKey) {
-      if (shadeMap) {
-        map.removeLayer(shadeMap);
-        shadeMap = null;
-      }
-      loaderEl.style.display = "block";
-      loaderEl.textContent = "Loading shade";
-      shadeMap = L.shadeMap({
-        apiKey: apiKey,
-        date: shadeDate,
-        color: "#01112f",
-        opacity: 0.7,
-        terrainSource: {
-          maxZoom: 15,
-          tileSize: 256,
-          getSourceUrl: ({ x, y, z }) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`,
-          getElevation: ({ r, g, b }) => (r * 256 + g + b / 256) - 32768,
-        },
-        getFeatures: loadBuildings,
-        debug: (msg) => console.log(msg),
-      }).addTo(map);
-      shadeMap.on("tileloaded", (loadedTiles, totalTiles) => {
-        if (!totalTiles) return;
-        const pct = (loadedTiles / totalTiles) * 100;
-        loaderEl.style.display = pct >= 100 ? "none" : "block";
-        loaderEl.textContent = `Loading shade ${pct.toFixed(0)}%`;
-      });
-    }
-
-    window.addEventListener("unhandledrejection", (event) => {
-      const text = String(event.reason && (event.reason.message || event.reason));
-      if (!text.toLowerCase().includes("shademap") && !text.toLowerCase().includes("apikey")) return;
-      statusEl.className = "msg error";
-      statusEl.textContent = "Shade did not start. Paste your own key from shademap.app/about and click Use this key.";
-      loaderEl.style.display = "none";
-    });
-
-    function nearestSlot(date) {
-      const parts = nycParts(date);
-      const month = +parts.month;
-      const hour = +parts.hour;
-      const months = Object.keys(options.months).map(Number);
-      const useMonth = months.includes(month) ? month : (months.includes(7) ? 7 : months[0]);
-      const hours = options.months[String(useMonth)] || [];
-      let useHour = hours[0];
-      let best = Infinity;
-      for (const candidate of hours) {
-        const gap = Math.abs(candidate - hour);
-        if (gap < best) {
-          best = gap;
-          useHour = candidate;
-        }
-      }
-      return { month: useMonth, hour: useHour };
-    }
 
     function clearRoutes() {
       for (const layer of routeLayers) map.removeLayer(layer);
@@ -313,7 +161,7 @@
       document.getElementById("heat").textContent = route.heat_saved_pct < 0.5 ? "Same" : `${Math.round(route.heat_saved_pct)}% lower`;
       if (fit && route.lines.length) {
         const bounds = L.latLngBounds(route.lines.flat());
-        map.fitBounds(bounds, { paddingTopLeft: [380, 40], paddingBottomRight: [40, 120], maxZoom: 17 });
+        map.fitBounds(bounds, { paddingTopLeft: [380, 40], paddingBottomRight: [40, 40], maxZoom: 17 });
       }
     }
 
@@ -322,7 +170,8 @@
       button.disabled = true;
       statusEl.className = "msg";
       statusEl.textContent = "Comparing walks…";
-      const slot = nearestSlot(shadeDate);
+      const month = Number(monthSelect.value);
+      const hour = Number(hourSelect.value);
       try {
         const response = await fetch("/api/routes", {
           method: "POST",
@@ -330,11 +179,20 @@
           body: JSON.stringify({
             origin: document.getElementById("origin").value,
             destination: document.getElementById("destination").value,
-            month: slot.month,
-            hour: slot.hour,
+            month: month,
+            hour: hour,
           }),
         });
-        const payload = await response.json();
+        const raw = await response.text();
+        if (!raw) {
+          throw new Error("The server restarted. Wait about 20 seconds, then press Find walks again.");
+        }
+        let payload;
+        try {
+          payload = JSON.parse(raw);
+        } catch (parseError) {
+          throw new Error("The server restarted. Wait about 20 seconds, then press Find walks again.");
+        }
         if (!response.ok) throw new Error(payload.detail || "Could not find walks");
         routeData = payload.routes;
         const balance = document.getElementById("balance");
@@ -342,8 +200,7 @@
         balance.value = String(payload.selected || 0);
         document.getElementById("routes").style.display = "block";
         showRoute(+balance.value, true);
-        const monthName = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][slot.month];
-        statusEl.textContent = `${payload.origin_name} → ${payload.destination_name}. Heat model: ${monthName}, ${slot.hour % 12 || 12}${slot.hour >= 12 ? " PM" : " AM"}.`;
+        statusEl.textContent = `${payload.origin_name} → ${payload.destination_name}. Heat model: ${MONTH_NAMES[month]}, ${hourLabel(hour)}.`;
       } catch (error) {
         statusEl.className = "msg error";
         statusEl.textContent = error.message;
@@ -355,50 +212,12 @@
     document.getElementById("balance").addEventListener("input", (event) => {
       if (routeData.length) showRoute(+event.target.value, false);
     });
+    monthSelect.addEventListener("change", fillHours);
 
-    timeSlider.addEventListener("input", () => {
-      if (playing) {
-        clearInterval(playing);
-        playing = null;
-        document.getElementById("play").textContent = "Play";
-      }
-      setClockMinutes(+timeSlider.value);
-    });
-
-    dayInput.addEventListener("change", () => {
-      const [year, month, day] = dayInput.value.split("-").map(Number);
-      const total = +timeSlider.value;
-      applyDate(zonedDate(year, month, day, Math.floor(total / 60), total % 60));
-    });
-
-    document.getElementById("play").addEventListener("click", () => {
-      const button = document.getElementById("play");
-      if (playing) {
-        clearInterval(playing);
-        playing = null;
-        button.textContent = "Play";
-        return;
-      }
-      button.textContent = "Pause";
-      playing = setInterval(() => {
-        setClockMinutes((+timeSlider.value + 1) % 1440);
-      }, 80);
-    });
-
-    document.getElementById("savekey").addEventListener("click", () => {
-      const key = keyInput.value.trim();
-      if (!key) return;
-      localStorage.setItem("shademapKey", key);
-      statusEl.className = "msg";
-      statusEl.textContent = "Reloading shade with that key.";
-      startShade(key);
-    });
-
-    paintClock();
     fetch("/api/options").then((response) => response.json()).then((payload) => {
       options = payload;
+      fillMonths();
     });
-    startShade(keyInput.value.trim());
   </script>
 </body>
 </html>
