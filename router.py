@@ -93,29 +93,102 @@ def load_network(path):
     return graph
 
 
+# Prefer the Financial District when a name matches more than one place.
+_FI_DI_LAT = 40.7128
+_FI_DI_LON = -74.0060
+_GEOCODE_UA = "ComfiMap/1.0 (student walking map; educational)"
+
+
+def _http_json(url):
+    request = urllib.request.Request(url, headers={"User-Agent": _GEOCODE_UA})
+    with urllib.request.urlopen(request, timeout=12) as response:
+        return json.loads(response.read().decode())
+
+
+def _near_downtown(hit):
+    return (hit[1] - _FI_DI_LAT) ** 2 + (hit[0] - _FI_DI_LON) ** 2 < 0.15 ** 2
+
+
+def _pick(hits):
+    """Keep the search engine's top hit when it is in New York. Otherwise use a downtown one."""
+    if not hits:
+        return None
+    if _near_downtown(hits[0]):
+        return hits[0]
+    for hit in hits[1:]:
+        if _near_downtown(hit):
+            return hit
+    return hits[0]
+
+
+def _from_photon(text):
+    params = urllib.parse.urlencode({
+        "q": text,
+        "lat": _FI_DI_LAT,
+        "lon": _FI_DI_LON,
+        "limit": 5,
+    })
+    payload = _http_json("https://photon.komoot.io/api/?" + params)
+    hits = []
+    for feature in payload.get("features", []):
+        coords = feature.get("geometry", {}).get("coordinates") or []
+        if len(coords) < 2:
+            continue
+        props = feature.get("properties") or {}
+        label = ", ".join(
+            part for part in (props.get("name"), props.get("street"), props.get("city"), props.get("state"))
+            if part
+        )
+        hits.append((float(coords[0]), float(coords[1]), label or text))
+    return _pick(hits)
+
+
+def _from_census(text):
+    params = urllib.parse.urlencode({
+        "address": text,
+        "benchmark": "Public_AR_Current",
+        "format": "json",
+    })
+    payload = _http_json(
+        "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?" + params
+    )
+    hits = []
+    for match in payload.get("result", {}).get("addressMatches", []):
+        coords = match.get("coordinates") or {}
+        if "x" not in coords or "y" not in coords:
+            continue
+        hits.append((float(coords["x"]), float(coords["y"]), match.get("matchedAddress") or text))
+    return _pick(hits)
+
+
+def _from_nominatim(text):
+    params = urllib.parse.urlencode({"q": text, "format": "json", "limit": 1})
+    payload = _http_json("https://nominatim.openstreetmap.org/search?" + params)
+    if not payload:
+        return None
+    hit = payload[0]
+    return float(hit["lon"]), float(hit["lat"]), hit.get("display_name", text)
+
+
 def geocode(query):
-    """Turn an address into longitude, latitude using OpenStreetMap Nominatim."""
+    """Turn an address into longitude, latitude.
+
+    The public site runs in a data center. OpenStreetMap's main address server
+    often refuses those machines, so Photon and the US Census geocoder go first.
+    """
     text = query.strip()
     if not text:
         raise RouteError("Type both a starting address and a destination.")
     if "new york" not in text.lower():
         text = f"{text}, New York, NY"
-    params = urllib.parse.urlencode({"q": text, "format": "json", "limit": 1})
-    request = urllib.request.Request(
-        "https://nominatim.openstreetmap.org/search?" + params,
-        headers={"User-Agent": "ComfiMap/1.0 (student walking-route project)"},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=15) as response:
-            payload = json.loads(response.read().decode())
-    except Exception as exc:
-        raise RouteError(
-            "The address search did not answer. Check your internet connection and try again."
-        ) from exc
-    if not payload:
-        raise RouteError(f"Could not find “{query.strip()}”. Try a fuller street address.")
-    hit = payload[0]
-    return float(hit["lon"]), float(hit["lat"]), hit.get("display_name", text)
+    for finder in (_from_photon, _from_census, _from_nominatim):
+        try:
+            hit = finder(text)
+        except Exception:
+            continue
+        if hit:
+            return hit
+    raise RouteError(f"Could not find “{query.strip()}”. Try a fuller street address in the Financial District.")
 
 
 def snap(graph, lon, lat):
