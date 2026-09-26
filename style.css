@@ -1,11 +1,30 @@
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+/* Text boxes, buttons, the date picker and map controls don't use the page font by default */
+input,
+button,
+select,
+.leaflet-container {
+  font-family: inherit;
 }
 
 #map {
   height: 100vh;
   width: 100%;
+  background: #f2f2f0;
+}
+
+/* Smooth fade between hours, so the shadows look like they move */
+.leaflet-layer {
+  transition: opacity 0.3s ease;
+}
+
+/* Toned-down OpenStreetMap, so its colours don't fight the heat colours */
+.osm-soft {
+  filter: saturate(0.3) brightness(1.08) contrast(0.95);
 }
 
 /* ---------- Top-left panel ---------- */
@@ -24,7 +43,7 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-.panel h1 { margin: 0; font-size: 22px; }
+.panel h1 { margin: 0; font-size: 22px; font-weight: 700; }
 .panel p  { color: #666; font-size: 14px; }
 
 .panel input {
@@ -45,10 +64,36 @@ body {
   border: none;
   border-radius: 10px;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .panel button:hover { background: #0f766e; }
+
+/* ---------- Legend ---------- */
+
+.legend { margin-top: 6px; }
+
+.legend-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+.legend-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(to right, #313695, #4575b4, #74add1, #fee090, #f46d43, #a50026);
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #777;
+  margin-top: 4px;
+}
 
 /* ---------- Bottom time bar ---------- */
 
@@ -70,7 +115,8 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-.time-bar select {
+.time-bar select,
+.time-bar input[type="date"] {
   padding: 8px 10px;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -105,7 +151,6 @@ body {
   scrollbar-width: none;
   cursor: grab;
   user-select: none;
-  /* fades the numbers out at the edges */
   mask-image: linear-gradient(to right, transparent, black 25%, black 75%, transparent);
 }
 .ruler::-webkit-scrollbar { display: none; }
@@ -157,7 +202,20 @@ body {
 }
 .tick.active::before { background: #0d9488; height: 18px; }
 
-/* On small screens, lift the zoom buttons so they sit above the time bar */
+/* ---------- Map layers ---------- */
+
+/* On light maps, blend the heat colours in so streets and buildings show through */
+.leaflet-tmrt-pane {
+  mix-blend-mode: multiply;
+}
+
+/* On colourful maps and the aerial photo, blending makes colours muddy */
+body.no-blend .leaflet-tmrt-pane {
+  mix-blend-mode: normal;
+}
+
+/* ---------- Small screens ---------- */
+
 @media (max-width: 700px) {
   .leaflet-bottom.leaflet-right { bottom: 90px; }
 }

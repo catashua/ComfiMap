@@ -3,30 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Comfimap</title>
+  <title>ComfiMap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="panel">
-    <h1>Comfimap</h1>
-    <p>Find the coolest walk in NYC.</p>
+    <h1>ComfiMap</h1>
+    <p>Find the coolest walk in NYC!</p>
 
     <input id="start" type="text" placeholder="Start address" />
     <input id="end" type="text" placeholder="End address" />
     <button id="routeBtn">Route me!</button>
 
     <p id="message"></p>
+
+    <div class="legend">
+      <div class="legend-title">Mean Radiant Temperature (Tmrt)</div>
+      <div class="legend-bar"></div>
+      <div class="legend-labels">
+        <span id="legendMin">20°C</span>
+        <span id="legendMax">65°C</span>
+      </div>
+    </div>
   </div>
 
   <div id="map"></div>
 
   <div class="time-bar">
-    <select id="month">
-      <option value="6">June</option>
-      <option value="7" selected>July</option>
-      <option value="8">August</option>
-    </select>
+    <input id="day" type="date" aria-label="Day of your walk" />
 
     <div class="ruler-wrap">
       <div class="ruler-arrow"></div>
@@ -35,6 +43,8 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
