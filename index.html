@@ -15,9 +15,35 @@
     <h1>ComfiMap</h1>
     <p>Find the coolest walk in NYC!</p>
 
-    <input id="start" type="text" placeholder="Start address" />
-    <input id="end" type="text" placeholder="End address" />
+    <div class="field">
+      <input id="start" type="text" placeholder="Start address" autocomplete="off" />
+      <ul class="suggestions" id="startSuggestions" hidden></ul>
+    </div>
+
+    <div class="field">
+      <input id="end" type="text" placeholder="End address" autocomplete="off" />
+      <ul class="suggestions" id="endSuggestions" hidden></ul>
+    </div>
+
     <button id="routeBtn">Route me!</button>
+
+    <div class="route-slider" id="routeSlider" hidden>
+      <div class="route-slider-labels">
+        <span class="label-fastest"><span class="icon-lightning"></span>FASTEST</span>
+        <span>COOLEST</span>
+      </div>
+      <input type="range" id="routeRange" min="0" max="0" step="1" value="0" list="routeTicks" />
+      <datalist id="routeTicks"></datalist>
+            <p class="route-summary" id="routeSummary"></p>
+      <a href="#" class="edit-time-link" id="editTimeLink">↺ change time</a>
+
+      <table class="route-table" id="routeTable" hidden>
+        <thead>
+          <tr><th>Route</th><th>Distance</th><th>% cooler</th></tr>
+        </thead>
+        <tbody id="routeTableBody"></tbody>
+      </table>
+    </div>
 
     <p id="message"></p>
 
@@ -30,6 +56,8 @@
       </div>
     </div>
   </div>
+
+
 
   <div id="map"></div>
 

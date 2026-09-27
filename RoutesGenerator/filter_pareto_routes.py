@@ -2,10 +2,10 @@
 """
 Filters a folder of route GeoPackages (as produced by
 give_routes_discomfort_geopandas.find_alternative_discomfort_routes) down to
-just the ones on the Pareto frontier in (total_dist, total_discomfort)
+just the ones on the Pareto frontier in (total_length, total_cd)
 space, and copies the surviving files into a separate output folder.
 
-Each input .gpkg is expected to contain a "total_dist" and "total_discomfort"
+Each input .gpkg is expected to contain a "total_length" and "total_cd"
 attribute on its features (all rows of a given route share the same values,
 since those columns describe the whole route, not an individual segment).
 
@@ -27,20 +27,20 @@ import geopandas as gpd
 
 
 def load_route_metrics(gpkg_path):
-    """Read a route GeoPackage and return (total_dist, total_discomfort)."""
+    """Read a route GeoPackage and return (total_length, total_cd)."""
     gdf = gpd.read_file(gpkg_path)
     if gdf.empty:
         raise ValueError("file contains no features")
-    if "total_dist" not in gdf.columns or "total_discomfort" not in gdf.columns:
-        raise ValueError("missing 'total_dist' / 'total_discomfort' columns")
+    if "total_length" not in gdf.columns or "total_cd" not in gdf.columns:
+        raise ValueError("missing 'total_length' / 'total_cd' columns")
 
     row = gdf.iloc[0]
-    return float(row["total_dist"]), float(row["total_discomfort"])
+    return float(row["total_length"]), float(row["total_cd"])
 
 
 def pareto_frontier(results):
     """
-    results: list of (total_dist, total_discomfort, path)
+    results: list of (total_length, total_cd, path)
 
     O(n log n) sort-and-sweep: sort by distance ascending, then keep a
     route only if it strictly improves on the best discomfort seen so far.
@@ -59,10 +59,10 @@ def pareto_frontier(results):
 def filter_routes_to_pareto_frontier(input_dir, output_dir):
     """
     Reads every .gpkg in `input_dir`, computes the Pareto frontier over
-    (total_dist, total_discomfort), and copies the surviving files into
+    (total_length, total_cd), and copies the surviving files into
     `output_dir` (created if it doesn't already exist).
 
-    Returns the list of (total_dist, total_discomfort, source_path) tuples
+    Returns the list of (total_length, total_cd, source_path) tuples
     that made the frontier.
     """
     gpkg_names = sorted(f for f in os.listdir(input_dir) if f.lower().endswith(".gpkg"))
@@ -85,11 +85,27 @@ def filter_routes_to_pareto_frontier(input_dir, output_dir):
             print(f"  {name}: {reason}")
 
     if not results:
-        raise ValueError("No route files with usable total_dist/total_discomfort data were found.")
+        raise ValueError("No route files with usable total_length/total_cd data were found.")
 
     frontier = pareto_frontier(results)
 
+    # 1. Ensure output folder exists
     os.makedirs(output_dir, exist_ok=True)
+
+    # 2. Clean out old files in output_dir, preserving .gitignore
+    for entry in os.listdir(output_dir):
+        if entry == ".gitignore":
+            continue
+        item_path = os.path.join(output_dir, entry)
+        try:
+            if os.path.isfile(item_path) or os.path.islink(item_path):
+                os.unlink(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+        except Exception as e:
+            print(f"Could not remove {item_path}: {e}")
+
+    # 3. Copy new Pareto-optimal routes
     for _dist, _discomfort, path in frontier:
         shutil.copy2(path, os.path.join(output_dir, os.path.basename(path)))
 
@@ -111,4 +127,4 @@ def _parse_args():
 if __name__ == "__main__":
     #args = _parse_args()
     #filter_routes_to_pareto_frontier(args.input_dir, args.output_dir)
-    filter_routes_to_pareto_frontier("./example_output", "./pareto_outputs")
+    filter_routes_to_pareto_frontier("./all_routes", "./optimal_routes")

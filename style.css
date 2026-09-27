@@ -43,7 +43,7 @@ select,
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-.panel h1 { margin: 0; font-size: 22px; font-weight: 700; }
+.panel h1 { margin: 0; font-size: 30px; font-weight: 800; }
 .panel p  { color: #666; font-size: 14px; }
 
 .panel input {
@@ -69,6 +69,61 @@ select,
 }
 
 .panel button:hover { background: #0f766e; }
+
+/* ---------- Address suggestions (autocomplete) ---------- */
+
+.field {
+  position: relative;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% - 6px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.suggestions[hidden] {
+  display: none;
+}
+
+.suggestion {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.suggestion.active,
+.suggestion:hover {
+  background: #f0fdfa;
+}
+
+.suggestion-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+}
+
+.suggestion-detail {
+  display: block;
+  font-size: 12px;
+  color: #888;
+}
+
+.suggestion-outside {
+  color: #b45309;
+}
 
 /* ---------- Legend ---------- */
 
@@ -200,25 +255,7 @@ select,
   font-weight: 700;
   font-size: 15px;
 }
-.tick.active::before { background: #0d9488; height: 18px; }
-
-/* ---------- Map layers ---------- */
-
-/* On light maps, blend the heat colours in so streets and buildings show through */
-.leaflet-tmrt-pane {
-  mix-blend-mode: multiply;
-}
-
-/* On colourful maps and the aerial photo, blending makes colours muddy */
-body.no-blend .leaflet-tmrt-pane {
-  mix-blend-mode: normal;
-}
-
-/* ---------- Small screens ---------- */
-
-@media (max-width: 700px) {
-  .leaflet-bottom.leaflet-right { bottom: 90px; }
-}
+.tick.active::before { background: rgb(13, 150, 139); height: 18px; }
 
 /* ---------- Zoom buttons: two separate circles ---------- */
 
@@ -241,7 +278,7 @@ body.no-blend .leaflet-tmrt-pane {
   border-radius: 50% !important;
   border: none !important;
   background: white;
-  color: #333;
+  color: #303030;
   font-size: 24px !important;
   font-weight: 500;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
@@ -260,4 +297,133 @@ body.no-blend .leaflet-tmrt-pane {
 .leaflet-control-zoom a.leaflet-disabled {
   background: #f3f3f3;
   color: #bbb;
+}
+
+/* ---------- Map layers ---------- */
+
+/* On light maps, blend the heat colours in so streets and buildings show through */
+.leaflet-tmrt-pane {
+  mix-blend-mode: multiply;
+}
+
+/* On colourful maps and the aerial photo, blending makes colours muddy */
+body.no-blend .leaflet-tmrt-pane {
+  mix-blend-mode: normal;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 700px) {
+  .leaflet-bottom.leaflet-right { bottom: 90px; }
+}
+
+/* ---------- Custom pins ---------- */
+
+.custom-pin { pointer-events: none; }
+
+.pin {
+  width: 40px;
+  height: 42px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-color);
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin span {
+  transform: rotate(45deg);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------- Fastest <-> Coolest slider ---------- */
+
+.route-slider { margin-top: 12px; }
+
+.route-slider { margin-top: 20px; }
+
+.route-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+  margin-bottom: -5px;
+}
+
+.route-slider-labels span {
+  font-weight: 600;        /* <- text boldness knob */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#routeRange {
+  width: 100%;
+  accent-color: #0d9488;
+  margin-top: 3px;         /* <- distance from labels to slider */
+}
+
+.route-summary {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: #444;
+  font-weight: 700;
+}
+
+.edit-time-link {
+  font-size: 12px;
+  color: #0d9488;
+  text-decoration: none;
+}
+
+/* Lightning bolt next to "Fastest" — pure CSS, no image needed */
+.icon-lightning {
+  width: 10px;
+  height: 14px;
+  background: #f59e0b;
+  display: inline-block;
+  clip-path: polygon(60% 0%, 0% 60%, 45% 60%, 40% 100%, 100% 40%, 55% 40%);
+}
+
+/* ---------- Route comparison table (its own floating card) ---------- */
+
+.route-table {
+  width: 100%;
+  box-sizing: border-box;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+.route-table th {
+  text-align: left;
+  color: #888;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 4px 6px;
+  border-bottom: 1px solid #eee;
+}
+
+.route-table td {
+  padding: 6px;
+  border-bottom: 1px solid #f2f2f2;
+  
+}
+.route-table td:nth-child(2),
+.route-table td:nth-child(3) {
+  font-size: 11px;
+}
+
+.route-table tr { cursor: pointer; }
+
+.route-table tr.active {
+  background: #f0fdfa;
+  font-weight: 700;
+  color: #0d9488;
 }
