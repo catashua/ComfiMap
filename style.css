@@ -43,7 +43,7 @@ select,
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-.panel h1 { margin: 0; font-size: 22px; font-weight: 700; }
+.panel h1 { margin: 0; font-size: 30px; font-weight: 800; }
 .panel p  { color: #666; font-size: 14px; }
 
 .panel input {
@@ -255,7 +255,7 @@ select,
   font-weight: 700;
   font-size: 15px;
 }
-.tick.active::before { background: #0d9488; height: 18px; }
+.tick.active::before { background: rgb(13, 150, 139); height: 18px; }
 
 /* ---------- Zoom buttons: two separate circles ---------- */
 
@@ -317,11 +317,13 @@ body.no-blend .leaflet-tmrt-pane {
   .leaflet-bottom.leaflet-right { bottom: 90px; }
 }
 
+/* ---------- Custom pins ---------- */
+
 .custom-pin { pointer-events: none; }
 
 .pin {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 42px;
   border-radius: 50% 50% 50% 0;
   background: var(--pin-color);
   transform: rotate(-45deg);
@@ -336,4 +338,92 @@ body.no-blend .leaflet-tmrt-pane {
   color: white;
   font-size: 13px;
   font-weight: 700;
+}
+
+/* ---------- Fastest <-> Coolest slider ---------- */
+
+.route-slider { margin-top: 12px; }
+
+.route-slider { margin-top: 20px; }
+
+.route-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+  margin-bottom: -5px;
+}
+
+.route-slider-labels span {
+  font-weight: 600;        /* <- text boldness knob */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#routeRange {
+  width: 100%;
+  accent-color: #0d9488;
+  margin-top: 3px;         /* <- distance from labels to slider */
+}
+
+.route-summary {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  color: #444;
+  font-weight: 700;
+}
+
+.edit-time-link {
+  font-size: 12px;
+  color: #0d9488;
+  text-decoration: none;
+}
+
+/* Lightning bolt next to "Fastest" — pure CSS, no image needed */
+.icon-lightning {
+  width: 10px;
+  height: 14px;
+  background: #f59e0b;
+  display: inline-block;
+  clip-path: polygon(60% 0%, 0% 60%, 45% 60%, 40% 100%, 100% 40%, 55% 40%);
+}
+
+/* ---------- Route comparison table (its own floating card) ---------- */
+
+.route-table {
+  width: 100%;
+  box-sizing: border-box;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+.route-table th {
+  text-align: left;
+  color: #888;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 4px 6px;
+  border-bottom: 1px solid #eee;
+}
+
+.route-table td {
+  padding: 6px;
+  border-bottom: 1px solid #f2f2f2;
+  
+}
+.route-table td:nth-child(2),
+.route-table td:nth-child(3) {
+  font-size: 11px;
+}
+
+.route-table tr { cursor: pointer; }
+
+.route-table tr.active {
+  background: #f0fdfa;
+  font-weight: 700;
+  color: #0d9488;
 }

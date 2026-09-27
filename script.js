@@ -234,6 +234,10 @@ function hoursFor(month) {
   return list;
 }
 
+/* =========================================================
+   Custom pins
+   ========================================================= */
+
 function createPin(color, label) {
   return L.divIcon({
     className: "custom-pin",
@@ -398,23 +402,172 @@ async function getPoint(input) {
 }
 
 /* =========================================================
-   Route me! button
+   Route me! button + candidate routes + fastest<->coolest slider
    ========================================================= */
 
 let routeLayers = [];
+let candidateRoutes = [];
+let routeLineLayers = []; // parallel array of {outline, line}
 
-// Draws a route with a white outline so it stands out on any base map and the heat colours
-function drawRoute(latlngs, color) {
-  const outline = L.polyline(latlngs, { color: "white", weight: 9, opacity: 0.9 }).addTo(map);
-  const line = L.polyline(latlngs, { color, weight: 5 }).addTo(map);
-  routeLayers.push(outline, line);
-  return line;
+// TEMP stand-in until the routing backend is wired up.
+// Replace this with a fetch() to your Dinkelbach/Bellman-Ford endpoint,
+// returning routes already sorted fastest -> coolest.
+function mockRoutes(start, end, n = 5) {
+  const routes = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const mid = {
+      lat: (start.lat + end.lat) / 2 + (t - 0.5) * 0.004,
+      lon: (start.lon + end.lon) / 2 + (t - 0.5) * 0.004,
+    };
+    routes.push({
+      latlngs: [[start.lat, start.lon], [mid.lat, mid.lon], [end.lat, end.lon]],
+      duration: 600 + t * 300,   // seconds — fastest first
+      meanTmrt: 55 - t * 15,     // °C — coolest last
+    });
+  }
+  return routes;
+}
+
+function drawCandidateRoutes(routes) {
+  routeLineLayers.forEach(({ outline, line }) => {
+    map.removeLayer(outline);
+    map.removeLayer(line);
+  });
+  routeLineLayers = routes.map((r) => ({
+    outline: L.polyline(r.latlngs, { color: "white", weight: 9, opacity: 0.9 }).addTo(map),
+    line: L.polyline(r.latlngs, { color: "#999", weight: 4, opacity: 0.5 }).addTo(map),
+  }));
+
+  // Fit once, when routes first appear — not on every slider move
+  const group = L.featureGroup(routeLineLayers.map((r) => r.line));
+  map.fitBounds(group.getBounds(), { padding: [60, 60] });
+}
+
+function highlightRoute(index) {
+  routeLineLayers.forEach(({ line }, i) => {
+    const active = i === index;
+    line.setStyle({
+      color: active ? "#0d9488" : "#999",
+      weight: active ? 6 : 4,
+      opacity: active ? 1 : 0.5,
+    });
+    if (active) line.bringToFront();
+  });
+  highlightTableRow(index);
+}
+
+function formatHourFull(h) {
+  return formatHour(h).replace(" ", ":00 "); // "6 PM" -> "6:00 PM"
+}
+
+function buildRouteSlider(routes) {
+  const slider = document.getElementById("routeRange");
+  const ticks = document.getElementById("routeTicks");
+  const wrap = document.getElementById("routeSlider");
+  const summary = document.getElementById("routeSummary");
+
+  slider.max = routes.length - 1;
+  slider.value = 0;
+  ticks.innerHTML = "";
+  routes.forEach((_, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    ticks.appendChild(opt);
+  });
+
+  wrap.hidden = false;
+
+  const altCount = routes.length - 1;
+  summary.textContent =
+    `${altCount} alternative route${altCount === 1 ? "" : "s"} at ${formatHourFull(currentHour)}!`;
+
+  document.querySelector(".time-bar").hidden = true;
+
+  highlightRoute(0);
+  buildRouteTable(routes);
+}
+
+document.getElementById("routeRange").addEventListener("input", (e) => {
+  highlightRoute(Number(e.target.value));
+});
+
+function resetToHome() {
+  document.querySelector(".time-bar").hidden = false;
+  document.getElementById("routeSlider").hidden = true;
+
+  routeLineLayers.forEach(({ outline, line }) => {
+    map.removeLayer(outline);
+    map.removeLayer(line);
+  });
+  routeLineLayers = [];
+
+  routeLayers.forEach((l) => map.removeLayer(l));
+  routeLayers = [];
+
+  message.textContent = "";
+}
+
+document.getElementById("editTimeLink").addEventListener("click", (e) => {
+  e.preventDefault();
+  resetToHome();
+});
+
+function routeDistanceMeters(latlngs) {
+  let d = 0;
+  for (let i = 1; i < latlngs.length; i++) {
+    d += L.latLng(latlngs[i - 1]).distanceTo(latlngs[i]);
+  }
+  return d;
+}
+
+function buildRouteTable(routes) {
+  const tbody = document.getElementById("routeTableBody");
+  document.getElementById("routeTable").hidden = false;
+
+  const distances = routes.map((r) => routeDistanceMeters(r.latlngs));
+  const shortestIdx = distances.indexOf(Math.min(...distances));
+  const baselineTmrt = routes[shortestIdx].meanTmrt;
+
+  tbody.innerHTML = "";
+  routes.forEach((r, i) => {
+    const coolerPct = ((baselineTmrt - r.meanTmrt) / baselineTmrt) * 100;
+    const label =
+      i === 0 ? " 1 · FASTEST" :
+      i === routes.length - 1 ? `${i + 1} · COOLEST` :
+      `${i + 1}`;
+
+    const tr = document.createElement("tr");
+    tr.dataset.index = i;
+    tr.innerHTML = `
+      <td>${label}</td>
+      <td>${(distances[i] / 1000).toFixed(2)} km</td>
+      <td>${i === shortestIdx ? "—" : coolerPct.toFixed(0) + "%"}</td>
+    `;
+    tr.addEventListener("click", () => {
+      document.getElementById("routeRange").value = i;
+      highlightRoute(i);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function highlightTableRow(index) {
+  document.querySelectorAll("#routeTableBody tr").forEach((tr) => {
+    tr.classList.toggle("active", Number(tr.dataset.index) === index);
+  });
 }
 
 document.getElementById("routeBtn").addEventListener("click", async () => {
   message.textContent = "Finding addresses...";
 
-  const [start, end] = await Promise.all([getPoint(startInput), getPoint(endInput)]);
+  let start, end;
+  try {
+    [start, end] = await Promise.all([getPoint(startInput), getPoint(endInput)]);
+  } catch (err) {
+    message.textContent = "Something went wrong looking up those addresses.";
+    return;
+  }
 
   if (!start || !end) {
     message.textContent = "Couldn't find one of those addresses.";
@@ -429,14 +582,15 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
   L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End"),
 );
 
-  // Placeholder until the backend returns a real route
-  const line = drawRoute([[start.lat, start.lon], [end.lat, end.lon]], "#111");
-  map.fitBounds(line.getBounds(), { padding: [60, 60] });
+  // TODO: swap for real backend call once routing endpoint is ready
+  candidateRoutes = mockRoutes(start, end);
+  drawCandidateRoutes(candidateRoutes);
+  buildRouteSlider(candidateRoutes);
 
   if (!inDataArea(start.lat, start.lon) || !inDataArea(end.lat, end.lon)) {
     message.textContent = "Heads up: one of those addresses is outside the area we have shade data for.";
   } else {
-    message.textContent = `Would route with route_${getTimeKey()}.gpkg`;
+    message.textContent = "";
   }
 });
 
