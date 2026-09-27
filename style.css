@@ -219,3 +219,45 @@ body.no-blend .leaflet-tmrt-pane {
 @media (max-width: 700px) {
   .leaflet-bottom.leaflet-right { bottom: 90px; }
 }
+
+/* ---------- Zoom buttons: two separate circles ---------- */
+
+.leaflet-control-zoom.leaflet-bar {
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px !important;
+  margin-right: 20px !important;
+}
+
+.leaflet-control-zoom a,
+.leaflet-control-zoom a:first-child,
+.leaflet-control-zoom a:last-child {
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 42px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: white;
+  color: #333;
+  font-size: 24px !important;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #0d9488;
+  color: white;
+}
+
+.leaflet-control-zoom a:active {
+  transform: scale(0.94);
+}
+
+.leaflet-control-zoom a.leaflet-disabled {
+  background: #f3f3f3;
+  color: #bbb;
+}
