@@ -452,6 +452,7 @@ async function fetchRealRoutes(start, end, month, hour) {
       latlngs: r.coordinates, // Array of [lat, lon] points
       duration: r.duration,   // Route duration in seconds
       meanTmrt: r.mean_tmrt   // Mean temperature of the route
+      distance: r.distance    
     }));
 
   } catch (error) {
@@ -637,7 +638,7 @@ function buildRouteTable(routes) {
   const tbody = document.getElementById("routeTableBody");
   document.getElementById("routeTable").hidden = false;
 
-  const distances = routes.map((r) => routeDistanceMeters(r.latlngs));
+  const distances = routes.map((r) => r.distance);
   const shortestIdx = distances.indexOf(Math.min(...distances));
   const baselineTmrt = routes[shortestIdx].meanTmrt;
 
