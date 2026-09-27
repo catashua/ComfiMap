@@ -74,7 +74,7 @@ def navigate():
             end_x=e_lon, end_y=e_lat,
             output_dir=None,
             percent=15.0,
-            max_paths=25,
+            max_paths=100,
             coords_crs="EPSG:4326"
         )
 
