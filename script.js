@@ -445,7 +445,7 @@ function mockRoutes(start, end, n = 5) {
 
 async function fetchRealRoutes(start, end, month, hour) {
     // Point this to your active local Flask server
-    const backendUrl = 'https://comfimap.tech'; 
+    const backendUrl = 'https://comfimap-j3ocq.ondigitalocean.app/api/navigate'; 
 
     try {
         const response = await fetch(backendUrl, {
