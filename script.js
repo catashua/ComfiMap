@@ -490,7 +490,7 @@ function buildRouteSlider(routes) {
 
   const altCount = routes.length - 1;
 summary.innerHTML =
-  `<span class="summary-number">${altCount}</span> alternative route${altCount === 1 ? "" : "s"} ` +
+  `<span class="summary-number">${altCount}</span>  alternative route${altCount === 1 ? "" : "s"} ` +
   `at <span class="summary-number">${formatHourFull(currentHour)}</span>!`;
 
   document.querySelector(".time-bar").hidden = true;
