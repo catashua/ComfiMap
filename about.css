@@ -1,0 +1,57 @@
+:root {
+  --accent: #3b73af;
+  --accent-dark: #2c5a8c;
+  --accent-light: #eaf2fa;
+  --red: #9a4539;
+}
+
+body {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  background: #f2f2f0;
+}
+
+.about-page {
+  max-width: 600px;
+  margin: 60px auto;
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.about-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.about-header .logo {
+  height: 50px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+
+.about-page p {
+  color: #555;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}

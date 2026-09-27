@@ -252,8 +252,8 @@ function createPin(color, label) {
   });
 }
 
-const startIcon = createPin("rgb(13, 150, 139)", "A");
-const endIcon = createPin("rgb(13, 150, 139)", "B");
+const startIcon = createPin("rgb(154, 69, 57)", "A");   // was rgb(13, 150, 139)
+const endIcon = createPin("rgb(154, 69, 57)", "B");     // was rgb(13, 150, 139)
 
 /* =========================================================
    Address search + suggestions as you type
@@ -465,7 +465,7 @@ function highlightRoute(index) {
   routeLineLayers.forEach(({ line }, i) => {
     const active = i === index;
     line.setStyle({
-      color: active ? "#0d9488" : "#999",
+      color: active ? "#9a4539" : "#999",   // was "#0d9488" : "#999"
       weight: active ? 9 : 6,
       opacity: active ? 1 : 0.5,
     });

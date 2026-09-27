@@ -9,13 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" type="image/svg+xml" href="logo.svg" />
 </head>
 <body>
-    <div class="panel">
+  <div class="panel">
+    <div class="panel-header">
       <img src="logo.svg" alt="ComfiMap logo" class="logo" />
-  
-    <p>Find the coolest walk in NYC!</p>
+    
+    </div>
+    <p>Find the coolest walk anytime in NYC!</p>
 
     <div class="field">
       <input id="start" type="text" placeholder="Start address" autocomplete="off" />
@@ -27,7 +28,7 @@
       <ul class="suggestions" id="endSuggestions" hidden></ul>
     </div>
 
-    <button id="routeBtn">Route me!</button>
+    <button id="routeBtn">Get Routes!</button>
 
     <div class="route-slider" id="routeSlider" hidden>
       <div class="route-slider-labels">
@@ -48,6 +49,8 @@
 
     <p id="message"></p>
   </div>
+
+  <a href="about.html" id="aboutBtn">About</a>
 
   <div id="map"></div>
 
