@@ -638,7 +638,7 @@ function buildRouteTable(routes) {
   const tbody = document.getElementById("routeTableBody");
   document.getElementById("routeTable").hidden = false;
 
-  const distances = routes.map((r) => r.distance);
+  const distances = routes.map((r) => r.distance ?? routeDistanceMeters(r.latlngs));
   const shortestIdx = distances.indexOf(Math.min(...distances));
   const baselineTmrt = routes[shortestIdx].meanTmrt;
 
