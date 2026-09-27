@@ -65,7 +65,7 @@ def navigate():
         # Format the arrays exactly as Leaflet expects: [latitude, longitude]
 
         # 1. Run the search in memory
-        input_gpkg_dataset = f"../data/FiDi/final routes/route_{month:02d}_{hour:02d}.gpkg"
+        input_gpkg_dataset = f"gpkgs/route_{month:02d}_{hour:02d}.gpkg"
 
 
         paths_generated = pp.run(
