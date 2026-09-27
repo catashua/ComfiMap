@@ -59,7 +59,7 @@ select,
 .panel button {
   width: 100%;
   padding: 12px;
-  background: #0d9488;
+  background: rgba(59, 115, 175, 0.847);
   color: white;
   border: none;
   border-radius: 10px;
@@ -427,4 +427,9 @@ body.no-blend .leaflet-tmrt-pane {
   margin-left: 4px;
   vertical-align: middle;
   transform: translateY(-2px);
+}
+
+.logo {
+  height: 45px;
+  margin-bottom: -9px;
 }

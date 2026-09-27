@@ -119,10 +119,17 @@ const message = document.getElementById("message");
    ========================================================= */
 
 const COLORS = [
-  [49, 54, 149], [69, 117, 180], [116, 173, 209],
-  [254, 224, 144], [244, 109, 67], [165, 0, 38],
+  [37, 99, 235],    // mid blue (coldest) — was deep navy, now more vivid
+  [59, 149, 220],   // brighter blue — was more muted/grayish
+  [116, 173, 209],  // light blue
+  [171, 217, 233],  // pale blue-green
+  [224, 243, 219],  // near-white green
+  [254, 224, 144],  // pale yellow
+  [253, 174, 97],   // orange
+  [244, 109, 67],   // red-orange
+  [215, 48, 39],    // red
+  [165, 0, 38],     // deep red (hottest)
 ];
-
 function tmrtColor(v) {
   let t = (v - TMRT_MIN) / (TMRT_MAX - TMRT_MIN);
   t = Math.max(0, Math.min(1, t)) * (COLORS.length - 1);
