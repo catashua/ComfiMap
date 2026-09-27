@@ -434,10 +434,20 @@ function drawCandidateRoutes(routes) {
     map.removeLayer(outline);
     map.removeLayer(line);
   });
-  routeLineLayers = routes.map((r) => ({
-    outline: L.polyline(r.latlngs, { color: "white", weight: 9, opacity: 0.9 }).addTo(map),
-    line: L.polyline(r.latlngs, { color: "#999", weight: 4, opacity: 0.5 }).addTo(map),
-  }));
+  routeLineLayers = routes.map((r, i) => {
+    const outline = L.polyline(r.latlngs, { color: "white", weight: 14, opacity: 0.9 }).addTo(map);
+    const line = L.polyline(r.latlngs, { color: "#999", weight: 6, opacity: 0.5 }).addTo(map);
+
+    // Clicking either the colored line or its white outline selects that route
+    const selectThis = () => {
+      document.getElementById("routeRange").value = i;
+      highlightRoute(i);
+    };
+    line.on("click", selectThis);
+    outline.on("click", selectThis);
+
+    return { outline, line };
+  });
 
   // Fit once, when routes first appear — not on every slider move
   const group = L.featureGroup(routeLineLayers.map((r) => r.line));
@@ -449,7 +459,7 @@ function highlightRoute(index) {
     const active = i === index;
     line.setStyle({
       color: active ? "#0d9488" : "#999",
-      weight: active ? 6 : 4,
+      weight: active ? 9 : 6,
       opacity: active ? 1 : 0.5,
     });
     if (active) line.bringToFront();
@@ -479,8 +489,9 @@ function buildRouteSlider(routes) {
   wrap.hidden = false;
 
   const altCount = routes.length - 1;
-  summary.textContent =
-    `${altCount} alternative route${altCount === 1 ? "" : "s"} at ${formatHourFull(currentHour)}!`;
+summary.innerHTML =
+  `<span class="summary-number">${altCount}</span> alternative route${altCount === 1 ? "" : "s"} ` +
+  `at <span class="summary-number">${formatHourFull(currentHour)}</span>!`;
 
   document.querySelector(".time-bar").hidden = true;
 
@@ -508,10 +519,6 @@ function resetToHome() {
   message.textContent = "";
 }
 
-document.getElementById("editTimeLink").addEventListener("click", (e) => {
-  e.preventDefault();
-  resetToHome();
-});
 
 function routeDistanceMeters(latlngs) {
   let d = 0;
@@ -519,6 +526,12 @@ function routeDistanceMeters(latlngs) {
     d += L.latLng(latlngs[i - 1]).distanceTo(latlngs[i]);
   }
   return d;
+}
+
+const WALK_SPEED_MPS = 1.4; // average walking speed, ~5 km/h
+
+function formatWalkTime(distanceMeters) {
+  return `${Math.round(distanceMeters / WALK_SPEED_MPS / 60)} min`;
 }
 
 function buildRouteTable(routes) {
@@ -532,18 +545,20 @@ function buildRouteTable(routes) {
   tbody.innerHTML = "";
   routes.forEach((r, i) => {
     const coolerPct = ((baselineTmrt - r.meanTmrt) / baselineTmrt) * 100;
-    const label =
-      i === 0 ? " 1 · FASTEST" :
-      i === routes.length - 1 ? `${i + 1} · COOLEST` :
-      `${i + 1}`;
+    const icon =
+  i === 0 ? '<span class="icon-lightning"></span>' :
+  i === routes.length - 1 ? '<span class="icon-snowflake"></span>' :
+  "";
 
-    const tr = document.createElement("tr");
-    tr.dataset.index = i;
-    tr.innerHTML = `
-      <td>${label}</td>
-      <td>${(distances[i] / 1000).toFixed(2)} km</td>
-      <td>${i === shortestIdx ? "—" : coolerPct.toFixed(0) + "%"}</td>
-    `;
+const tr = document.createElement("tr");
+tr.dataset.index = i;
+tr.innerHTML = `
+  <td>${i + 1}${icon}</td>
+  <td>${(distances[i] / 1000).toFixed(2)} km</td>
+  <td>${formatWalkTime(distances[i])}</td>
+  <td>${i === shortestIdx ? "—" : coolerPct.toFixed(0) + "%"}</td>
+`;
+
     tr.addEventListener("click", () => {
       document.getElementById("routeRange").value = i;
       highlightRoute(i);

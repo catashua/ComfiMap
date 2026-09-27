@@ -389,6 +389,12 @@ body.no-blend .leaflet-tmrt-pane {
   display: inline-block;
   clip-path: polygon(60% 0%, 0% 60%, 45% 60%, 40% 100%, 100% 40%, 55% 40%);
 }
+.icon-snowflake::before {
+  content: "❄";
+  font-size: 18px;
+  color: #38bdf8;
+  line-height: 1;
+}
 
 /* ---------- Route comparison table (its own floating card) ---------- */
 
@@ -396,9 +402,15 @@ body.no-blend .leaflet-tmrt-pane {
   width: 100%;
   box-sizing: border-box;
   border-collapse: collapse;
-  font-size: 13px;
-  margin-top: 14px;
+  table-layout: fixed;
+  margin: 24px 0 20px;
 }
+
+.route-table th:nth-child(1), .route-table td:nth-child(1) { width: 20%; }
+.route-table th:nth-child(2), .route-table td:nth-child(2) { width: 28%; }
+.route-table th:nth-child(3), .route-table td:nth-child(3) { width: 24%; }
+.route-table th:nth-child(4), .route-table td:nth-child(4) { width: 28%; }
+
 
 .route-table th {
   text-align: left;
@@ -413,11 +425,8 @@ body.no-blend .leaflet-tmrt-pane {
 .route-table td {
   padding: 6px;
   border-bottom: 1px solid #f2f2f2;
-  
-}
-.route-table td:nth-child(2),
-.route-table td:nth-child(3) {
-  font-size: 11px;
+  font-size: 12px;
+  color: #333;
 }
 
 .route-table tr { cursor: pointer; }
@@ -425,5 +434,18 @@ body.no-blend .leaflet-tmrt-pane {
 .route-table tr.active {
   background: #f0fdfa;
   font-weight: 700;
+  color: #0d9488;
+}
+
+.route-table td .icon-lightning,
+.route-table td .icon-snowflake {
+  margin-left: 4px;
+  vertical-align: middle;
+  transform: translateY(-2px);
+}
+
+.summary-number {
+  font-size: 18px;
+  font-weight: 800;
   color: #0d9488;
 }

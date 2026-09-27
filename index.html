@@ -28,19 +28,18 @@
     <button id="routeBtn">Route me!</button>
 
     <div class="route-slider" id="routeSlider" hidden>
-      <div class="route-slider-labels">
+            <div class="route-slider-labels">
         <span class="label-fastest"><span class="icon-lightning"></span>FASTEST</span>
-        <span>COOLEST</span>
+        <span class="label-coolest">COOLEST<span class="icon-snowflake"></span></span>
       </div>
       <input type="range" id="routeRange" min="0" max="0" step="1" value="0" list="routeTicks" />
       <datalist id="routeTicks"></datalist>
             <p class="route-summary" id="routeSummary"></p>
-      <a href="#" class="edit-time-link" id="editTimeLink">↺ change time</a>
 
-      <table class="route-table" id="routeTable" hidden>
+<table class="route-table" id="routeTable" hidden>
         <thead>
-          <tr><th>Route</th><th>Distance</th><th>% cooler</th></tr>
-        </thead>
+  <tr><th>Route</th><th>Distance</th><th>Time</th><th>% cooler</th></tr>
+</thead>
         <tbody id="routeTableBody"></tbody>
       </table>
     </div>
