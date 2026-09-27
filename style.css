@@ -530,3 +530,17 @@ body.no-blend .leaflet-tmrt-pane {
   flex: 1;
   min-width: 0;
 }
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--accent-light);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  margin: 10px auto 0;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

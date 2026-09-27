@@ -497,14 +497,19 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
   const currentMonth = selectedMonth();
   const targetHour = currentHour;
 
-  message.textContent = "Calculating coolest paths...";
+  const spinner = document.getElementById("spinner");
 
-  const realRoutes = await fetchRealRoutes(start, end, currentMonth, targetHour);
+message.textContent = "Calculating coolest paths...";
+spinner.hidden = false;
 
-  if (!realRoutes || realRoutes.length === 0) {
-    if (!message.textContent) message.textContent = "No valid paths found.";
-    return;
-  }
+const realRoutes = await fetchRealRoutes(start, end, currentMonth, targetHour);
+
+spinner.hidden = true;
+
+if (!realRoutes || realRoutes.length === 0) {
+  if (!message.textContent) message.textContent = "No valid paths found.";
+  return;
+}
 
   candidateRoutes = realRoutes;
   drawCandidateRoutes(candidateRoutes);
@@ -521,10 +526,15 @@ document.getElementById("updateTimeBtn").addEventListener("click", async () => {
   if (!lastStart || !lastEnd) return;
   message.textContent = "Recalculating coolest paths...";
 
+  const spinner = document.getElementById("spinner");
+  spinner.hidden = false;
+
   const currentMonth = selectedMonth();
   const targetHour = currentHour;
 
   const realRoutes = await fetchRealRoutes(lastStart, lastEnd, currentMonth, targetHour);
+
+  spinner.hidden = true;
 
   if (!realRoutes || realRoutes.length === 0) {
     message.textContent = "No valid paths found.";
