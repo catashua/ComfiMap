@@ -4,7 +4,7 @@
 
 const TIF_FOLDER = "/data/FiDi/clipped/";
 const DATA_YEAR = 2025;   // year in the Tmrt filenames
-const productionBackendUrl = 'https://comfimap3-fh5ci.ondigitalocean.app/api/navigate'; /*'https://comfimap-j3ocq.ondigitalocean.app/api/navigate';*/
+const productionBackendUrl = 'https://comfimap3-fh5ci.ondigitalocean.app/api/navigate';
 
 // Daylight hours you have data for, per month: [first hour, last hour]
 const HOURS_BY_MONTH = {
@@ -120,8 +120,8 @@ const message = document.getElementById("message");
    ========================================================= */
 
 const COLORS = [
-  [37, 99, 235],    // mid blue (coldest) — was deep navy, now more vivid
-  [59, 149, 220],   // brighter blue — was more muted/grayish
+  [37, 99, 235],    // mid blue (coldest)
+  [59, 149, 220],   // brighter blue
   [116, 173, 209],  // light blue
   [171, 217, 233],  // pale blue-green
   [224, 243, 219],  // near-white green
@@ -131,6 +131,7 @@ const COLORS = [
   [215, 48, 39],    // red
   [165, 0, 38],     // deep red (hottest)
 ];
+
 function tmrtColor(v) {
   let t = (v - TMRT_MIN) / (TMRT_MAX - TMRT_MIN);
   t = Math.max(0, Math.min(1, t)) * (COLORS.length - 1);
@@ -253,8 +254,8 @@ function createPin(color, label) {
   });
 }
 
-const startIcon = createPin("rgb(154, 69, 57)", "A");   // was rgb(13, 150, 139)
-const endIcon = createPin("rgb(154, 69, 57)", "B");     // was rgb(13, 150, 139)
+const startIcon = createPin("rgb(154, 69, 57)", "A");
+const endIcon = createPin("rgb(154, 69, 57)", "B");
 
 /* =========================================================
    Address search + suggestions as you type
@@ -417,73 +418,49 @@ let routeLineLayers = []; // parallel array of {outline, line}
 let lastStart = null;
 let lastEnd = null;
 
-// TEMP stand-in until the routing backend is wired up.
-// Replace this with a fetch() to your Dinkelbach/Bellman-Ford endpoint,
-// returning routes already sorted fastest -> coolest.
-function mockRoutes(start, end, n = 5) {
-  const routes = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const mid = {
-      lat: (start.lat + end.lat) / 2 + (t - 0.5) * 0.004,
-      lon: (start.lon + end.lon) / 2 + (t - 0.5) * 0.004,
-    };
-    routes.push({
-      latlngs: [[start.lat, start.lon], [mid.lat, mid.lon], [end.lat, end.lon]],
-      duration: 600 + t * 300,   // seconds — fastest first
-      meanTmrt: 55 - t * 15,     // °C — coolest last
-    });
-  }
-  return routes;
-}
-
-//HI//////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /* =========================================================
-   Real Route Fetcher (Replaces mockRoutes)
+   Real Route Fetcher
    ========================================================= */
 
 async function fetchRealRoutes(start, end, month, hour) {
-    // Point this to your active local Flask server
-    const backendUrl = productionBackendUrl; 
+  const backendUrl = productionBackendUrl;
 
-    try {
-        const response = await fetch(backendUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                start_lat: start.lat, 
-                start_lon: start.lon,
-                end_lat: end.lat,
-                end_lon: end.lon,
-                month: month,
-                hour: hour
-            })
-        });
+  try {
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        start_lat: start.lat,
+        start_lon: start.lon,
+        end_lat: end.lat,
+        end_lon: end.lon,
+        month: month,
+        hour: hour
+      })
+    });
 
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || "Failed to fetch routes");
-        }
-
-        const data = await response.json();
-        
-        // This takes the multiple routes returned from Python/Tiger Data
-        // and formats them exactly how your existing table and slider expect them!
-        return data.routes.map(r => ({
-            latlngs: r.coordinates, // Array of [lat, lon] points
-            duration: r.duration,   // Route duration in seconds
-            meanTmrt: r.mean_tmrt   // Mean temperature of the route
-        }));
-
-    } catch (error) {
-        console.error("Backend Error:", error);
-        message.textContent = "Error: " + error.message;
-        return null;
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Failed to fetch routes");
     }
+
+    const data = await response.json();
+
+    // Takes the multiple routes returned from the backend and formats them
+    // exactly how the table/slider expect them
+    return data.routes.map(r => ({
+      latlngs: r.coordinates, // Array of [lat, lon] points
+      duration: r.duration,   // Route duration in seconds
+      meanTmrt: r.mean_tmrt   // Mean temperature of the route
+    }));
+
+  } catch (error) {
+    console.error("Backend Error:", error);
+    message.textContent = "Error: " + error.message;
+    return null;
+  }
 }
 
-// Update the Route Button click listener to handle the real data request
 document.getElementById("routeBtn").addEventListener("click", async () => {
   message.textContent = "Finding addresses...";
 
@@ -500,6 +477,15 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
     return;
   }
 
+  lastStart = start;
+  lastEnd = end;
+  document.getElementById("updateTimeBtn").hidden = false;
+
+  // The button just took up space in .time-bar, so the ruler shrank —
+  // recompute spacer widths and re-center the arrow on the current hour
+  sizeSpacers();
+  scrollToHour(currentHour, false);
+
   routeLayers.forEach((l) => map.removeLayer(l));
   routeLayers = [];
 
@@ -508,19 +494,22 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
     L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End")
   );
 
-  // Grab the exact month and hour active on your custom timeline picker
   const currentMonth = selectedMonth();
   const targetHour = currentHour;
 
-  message.textContent = "Calculating coolest paths...";
-  
-  // Call our new live database API function!
-  const realRoutes = await fetchRealRoutes(start, end, currentMonth, targetHour);
-  
-  if (!realRoutes || realRoutes.length === 0) {
-      if (!message.textContent) message.textContent = "No valid paths found.";
-      return;
-  }
+  const spinner = document.getElementById("spinner");
+
+message.textContent = "Calculating coolest paths...";
+spinner.hidden = false;
+
+const realRoutes = await fetchRealRoutes(start, end, currentMonth, targetHour);
+
+spinner.hidden = true;
+
+if (!realRoutes || realRoutes.length === 0) {
+  if (!message.textContent) message.textContent = "No valid paths found.";
+  return;
+}
 
   candidateRoutes = realRoutes;
   drawCandidateRoutes(candidateRoutes);
@@ -533,9 +522,30 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("updateTimeBtn").addEventListener("click", async () => {
+  if (!lastStart || !lastEnd) return;
+  message.textContent = "Recalculating coolest paths...";
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+  const spinner = document.getElementById("spinner");
+  spinner.hidden = false;
 
+  const currentMonth = selectedMonth();
+  const targetHour = currentHour;
+
+  const realRoutes = await fetchRealRoutes(lastStart, lastEnd, currentMonth, targetHour);
+
+  spinner.hidden = true;
+
+  if (!realRoutes || realRoutes.length === 0) {
+    message.textContent = "No valid paths found.";
+    return;
+  }
+
+  candidateRoutes = realRoutes;
+  drawCandidateRoutes(candidateRoutes);
+  buildRouteSlider(candidateRoutes);
+  message.textContent = "";
+});
 
 function drawCandidateRoutes(routes) {
   routeLineLayers.forEach(({ outline, line }) => {
@@ -566,7 +576,7 @@ function highlightRoute(index) {
   routeLineLayers.forEach(({ line }, i) => {
     const active = i === index;
     line.setStyle({
-      color: active ? "#9a4539" : "#999",   // was "#0d9488" : "#999"
+      color: active ? "#9a4539" : "#999",
       weight: active ? 9 : 6,
       opacity: active ? 1 : 0.5,
     });
@@ -661,88 +671,6 @@ function highlightTableRow(index) {
   });
 }
 
-// Shared by "Route me!" and "Update time" — same logic, different trigger
-async function runRouting(start, end) {
-  routeLayers.forEach((l) => map.removeLayer(l));
-  routeLayers = [];
-
-  routeLayers.push(
-    L.marker([start.lat, start.lon], { icon: startIcon }).addTo(map).bindPopup("Start"),
-    L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End"),
-  );
-
-  // TODO: swap for real backend call once routing endpoint is ready
-  candidateRoutes = mockRoutes(start, end);
-  drawCandidateRoutes(candidateRoutes);
-  buildRouteSlider(candidateRoutes);
-
-  if (!inDataArea(start.lat, start.lon) || !inDataArea(end.lat, end.lon)) {
-    message.textContent = "Heads up: one of those addresses is outside the area we have shade data for.";
-  } else {
-    message.textContent = "";
-  }
-}
-/*
-document.getElementById("routeBtn").addEventListener("click", async () => {
-  message.textContent = "Finding addresses...";
-
-  let start, end;
-  try {
-    [start, end] = await Promise.all([getPoint(startInput), getPoint(endInput)]);
-  } catch (err) {
-    message.textContent = "Something went wrong looking up those addresses.";
-    return;
-  }
-
-  if (!start || !end) {
-    message.textContent = "Couldn't find one of those addresses.";
-    return;
-  }
-
-  lastStart = start;
-  lastEnd = end;
-  document.getElementById("updateTimeBtn").hidden = false;
-
-  // The button just took up space in .time-bar, so the ruler shrank —
-  // recompute spacer widths and re-center the arrow on the current hour
-  sizeSpacers();
-  scrollToHour(currentHour, false);
-
-  await runRouting(start, end);
-});
-*/
-
-/*
-document.getElementById("updateTimeBtn").addEventListener("click", async () => {
-  if (!lastStart || !lastEnd) return;
-  message.textContent = "Recalculating...";
-  await runRouting(lastStart, lastEnd);
-});*/
-
-
-document.getElementById("updateTimeBtn").addEventListener("click", async () => {
-  if (!lastStart || !lastEnd) return;
-  message.textContent = "Recalculating coolest paths...";
-
-  // Pull fresh month and hour metrics right from your custom ruler timeline
-  const currentMonth = selectedMonth();
-  const targetHour = currentHour;
-
-  // Query the live database endpoint
-  const realRoutes = await fetchRealRoutes(lastStart, lastEnd, currentMonth, targetHour);
-
-  if (!realRoutes || realRoutes.length === 0) {
-      message.textContent = "No valid paths found.";
-      return;
-  }
-
-  candidateRoutes = realRoutes;
-  drawCandidateRoutes(candidateRoutes);
-  buildRouteSlider(candidateRoutes);
-  message.textContent = "";
-});
-
-//################################################################################################################
 /* =========================================================
    Hour ruler
    ========================================================= */
