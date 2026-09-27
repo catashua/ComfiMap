@@ -28,18 +28,18 @@
     <button id="routeBtn">Route me!</button>
 
     <div class="route-slider" id="routeSlider" hidden>
-            <div class="route-slider-labels">
+      <div class="route-slider-labels">
         <span class="label-fastest"><span class="icon-lightning"></span>FASTEST</span>
         <span class="label-coolest">COOLEST<span class="icon-snowflake"></span></span>
       </div>
       <input type="range" id="routeRange" min="0" max="0" step="1" value="0" list="routeTicks" />
       <datalist id="routeTicks"></datalist>
-            <p class="route-summary" id="routeSummary"></p>
+      <p class="route-summary" id="routeSummary"></p>
 
-<table class="route-table" id="routeTable" hidden>
+      <table class="route-table" id="routeTable" hidden>
         <thead>
-  <tr><th>Route</th><th>Distance</th><th>Time</th><th>% cooler</th></tr>
-</thead>
+          <tr><th>Route</th><th>Distance</th><th>Time</th><th>% cooler</th></tr>
+        </thead>
         <tbody id="routeTableBody"></tbody>
       </table>
     </div>
@@ -56,8 +56,6 @@
     </div>
   </div>
 
-
-
   <div id="map"></div>
 
   <div class="time-bar">
@@ -67,6 +65,8 @@
       <div class="ruler-arrow"></div>
       <div class="ruler" id="ruler"></div>
     </div>
+
+    <button id="updateTimeBtn" hidden>Update time</button>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

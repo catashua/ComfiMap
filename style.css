@@ -179,6 +179,20 @@ select,
   background: white;
 }
 
+.time-bar button {
+  padding: 8px 14px;
+  background: #0d9488;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.time-bar button:hover { background: #0f766e; }
+
 .ruler-wrap {
   position: relative;
   flex: 1;
@@ -342,8 +356,6 @@ body.no-blend .leaflet-tmrt-pane {
 
 /* ---------- Fastest <-> Coolest slider ---------- */
 
-.route-slider { margin-top: 12px; }
-
 .route-slider { margin-top: 20px; }
 
 .route-slider-labels {
@@ -375,10 +387,10 @@ body.no-blend .leaflet-tmrt-pane {
   font-weight: 700;
 }
 
-.edit-time-link {
-  font-size: 12px;
+.summary-number {
+  font-size: 18px;
+  font-weight: 800;
   color: #0d9488;
-  text-decoration: none;
 }
 
 /* Lightning bolt next to "Fastest" — pure CSS, no image needed */
@@ -396,7 +408,7 @@ body.no-blend .leaflet-tmrt-pane {
   line-height: 1;
 }
 
-/* ---------- Route comparison table (its own floating card) ---------- */
+/* ---------- Route comparison table (nested inside the slider box) ---------- */
 
 .route-table {
   width: 100%;
@@ -406,20 +418,20 @@ body.no-blend .leaflet-tmrt-pane {
   margin: 24px 0 20px;
 }
 
-.route-table th:nth-child(1), .route-table td:nth-child(1) { width: 20%; }
-.route-table th:nth-child(2), .route-table td:nth-child(2) { width: 28%; }
-.route-table th:nth-child(3), .route-table td:nth-child(3) { width: 24%; }
-.route-table th:nth-child(4), .route-table td:nth-child(4) { width: 28%; }
-
+.route-table th:nth-child(1), .route-table td:nth-child(1) { width: 16%; }
+.route-table th:nth-child(2), .route-table td:nth-child(2) { width: 26%; }
+.route-table th:nth-child(3), .route-table td:nth-child(3) { width: 20%; }
+.route-table th:nth-child(4), .route-table td:nth-child(4) { width: 38%; }
 
 .route-table th {
   text-align: left;
   color: #888;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  padding: 4px 6px;
+  padding: 4px 4px;
   border-bottom: 1px solid #eee;
+  white-space: nowrap;
 }
 
 .route-table td {
@@ -442,10 +454,4 @@ body.no-blend .leaflet-tmrt-pane {
   margin-left: 4px;
   vertical-align: middle;
   transform: translateY(-2px);
-}
-
-.summary-number {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0d9488;
 }

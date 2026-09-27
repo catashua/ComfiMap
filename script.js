@@ -402,12 +402,14 @@ async function getPoint(input) {
 }
 
 /* =========================================================
-   Route me! button + candidate routes + fastest<->coolest slider
+   Route me! / Update time + candidate routes + slider
    ========================================================= */
 
 let routeLayers = [];
 let candidateRoutes = [];
 let routeLineLayers = []; // parallel array of {outline, line}
+let lastStart = null;
+let lastEnd = null;
 
 // TEMP stand-in until the routing backend is wired up.
 // Replace this with a fetch() to your Dinkelbach/Bellman-Ford endpoint,
@@ -489,11 +491,9 @@ function buildRouteSlider(routes) {
   wrap.hidden = false;
 
   const altCount = routes.length - 1;
-summary.innerHTML =
-  `<span class="summary-number">${altCount}</span>  alternative route${altCount === 1 ? "" : "s"} ` +
-  `at <span class="summary-number">${formatHourFull(currentHour)}</span>!`;
-
-  document.querySelector(".time-bar").hidden = true;
+  summary.innerHTML =
+    `<span class="summary-number">${altCount}</span> alternative route${altCount === 1 ? "" : "s"} ` +
+    `at <span class="summary-number">${formatHourFull(currentHour)}</span>!`;
 
   highlightRoute(0);
   buildRouteTable(routes);
@@ -502,23 +502,6 @@ summary.innerHTML =
 document.getElementById("routeRange").addEventListener("input", (e) => {
   highlightRoute(Number(e.target.value));
 });
-
-function resetToHome() {
-  document.querySelector(".time-bar").hidden = false;
-  document.getElementById("routeSlider").hidden = true;
-
-  routeLineLayers.forEach(({ outline, line }) => {
-    map.removeLayer(outline);
-    map.removeLayer(line);
-  });
-  routeLineLayers = [];
-
-  routeLayers.forEach((l) => map.removeLayer(l));
-  routeLayers = [];
-
-  message.textContent = "";
-}
-
 
 function routeDistanceMeters(latlngs) {
   let d = 0;
@@ -546,19 +529,18 @@ function buildRouteTable(routes) {
   routes.forEach((r, i) => {
     const coolerPct = ((baselineTmrt - r.meanTmrt) / baselineTmrt) * 100;
     const icon =
-  i === 0 ? '<span class="icon-lightning"></span>' :
-  i === routes.length - 1 ? '<span class="icon-snowflake"></span>' :
-  "";
+      i === 0 ? '<span class="icon-lightning"></span>' :
+      i === routes.length - 1 ? '<span class="icon-snowflake"></span>' :
+      "";
 
-const tr = document.createElement("tr");
-tr.dataset.index = i;
-tr.innerHTML = `
-  <td>${i + 1}${icon}</td>
-  <td>${(distances[i] / 1000).toFixed(2)} km</td>
-  <td>${formatWalkTime(distances[i])}</td>
-  <td>${i === shortestIdx ? "—" : coolerPct.toFixed(0) + "%"}</td>
-`;
-
+    const tr = document.createElement("tr");
+    tr.dataset.index = i;
+    tr.innerHTML = `
+      <td>${i + 1}${icon}</td>
+      <td>${(distances[i] / 1000).toFixed(2)} km</td>
+      <td>${formatWalkTime(distances[i])}</td>
+      <td>${i === shortestIdx ? "—" : coolerPct.toFixed(0) + "%"}</td>
+    `;
     tr.addEventListener("click", () => {
       document.getElementById("routeRange").value = i;
       highlightRoute(i);
@@ -571,6 +553,28 @@ function highlightTableRow(index) {
   document.querySelectorAll("#routeTableBody tr").forEach((tr) => {
     tr.classList.toggle("active", Number(tr.dataset.index) === index);
   });
+}
+
+// Shared by "Route me!" and "Update time" — same logic, different trigger
+async function runRouting(start, end) {
+  routeLayers.forEach((l) => map.removeLayer(l));
+  routeLayers = [];
+
+  routeLayers.push(
+    L.marker([start.lat, start.lon], { icon: startIcon }).addTo(map).bindPopup("Start"),
+    L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End"),
+  );
+
+  // TODO: swap for real backend call once routing endpoint is ready
+  candidateRoutes = mockRoutes(start, end);
+  drawCandidateRoutes(candidateRoutes);
+  buildRouteSlider(candidateRoutes);
+
+  if (!inDataArea(start.lat, start.lon) || !inDataArea(end.lat, end.lon)) {
+    message.textContent = "Heads up: one of those addresses is outside the area we have shade data for.";
+  } else {
+    message.textContent = "";
+  }
 }
 
 document.getElementById("routeBtn").addEventListener("click", async () => {
@@ -589,24 +593,22 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
     return;
   }
 
-  routeLayers.forEach((l) => map.removeLayer(l));
-  routeLayers = [];
+  lastStart = start;
+  lastEnd = end;
+  document.getElementById("updateTimeBtn").hidden = false;
 
-  routeLayers.push(
-  L.marker([start.lat, start.lon], { icon: startIcon }).addTo(map).bindPopup("Start"),
-  L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End"),
-);
+  // The button just took up space in .time-bar, so the ruler shrank —
+  // recompute spacer widths and re-center the arrow on the current hour
+  sizeSpacers();
+  scrollToHour(currentHour, false);
 
-  // TODO: swap for real backend call once routing endpoint is ready
-  candidateRoutes = mockRoutes(start, end);
-  drawCandidateRoutes(candidateRoutes);
-  buildRouteSlider(candidateRoutes);
+  await runRouting(start, end);
+});
 
-  if (!inDataArea(start.lat, start.lon) || !inDataArea(end.lat, end.lon)) {
-    message.textContent = "Heads up: one of those addresses is outside the area we have shade data for.";
-  } else {
-    message.textContent = "";
-  }
+document.getElementById("updateTimeBtn").addEventListener("click", async () => {
+  if (!lastStart || !lastEnd) return;
+  message.textContent = "Recalculating...";
+  await runRouting(lastStart, lastEnd);
 });
 
 /* =========================================================
