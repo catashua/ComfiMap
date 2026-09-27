@@ -316,3 +316,24 @@ body.no-blend .leaflet-tmrt-pane {
 @media (max-width: 700px) {
   .leaflet-bottom.leaflet-right { bottom: 90px; }
 }
+
+.custom-pin { pointer-events: none; }
+
+.pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-color);
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin span {
+  transform: rotate(45deg);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+}

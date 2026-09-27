@@ -234,6 +234,18 @@ function hoursFor(month) {
   return list;
 }
 
+function createPin(color, label) {
+  return L.divIcon({
+    className: "custom-pin",
+    html: `<div class="pin" style="--pin-color:${color}"><span>${label}</span></div>`,
+    iconSize: [32, 42],
+    iconAnchor: [16, 40], // tip of the teardrop touches the actual location
+  });
+}
+
+const startIcon = createPin("rgb(13, 150, 139)", "A");
+const endIcon = createPin("rgb(13, 150, 139)", "B");
+
 /* =========================================================
    Address search + suggestions as you type
    ========================================================= */
@@ -413,9 +425,9 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
   routeLayers = [];
 
   routeLayers.push(
-    L.marker([start.lat, start.lon]).addTo(map).bindPopup("Start"),
-    L.marker([end.lat, end.lon]).addTo(map).bindPopup("End"),
-  );
+  L.marker([start.lat, start.lon], { icon: startIcon }).addTo(map).bindPopup("Start"),
+  L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End"),
+);
 
   // Placeholder until the backend returns a real route
   const line = drawRoute([[start.lat, start.lon], [end.lat, end.lon]], "#111");
