@@ -643,7 +643,7 @@ function buildRouteTable(routes) {
     tr.dataset.index = i;
     tr.innerHTML = `
       <td>${i + 1}${icon}</td>
-      <td>${distances[i].toFixed(2)} m</td>
+      <td>${distances[i].toFixed(1)} m</td>
       <td>${formatWalkTime(distances[i])}</td>
       <td>${i === shortestIdx ? "—" : coolerPct.toFixed(0) + "%"}</td>
     `;
