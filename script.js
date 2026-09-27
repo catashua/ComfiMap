@@ -4,6 +4,7 @@
 
 const TIF_FOLDER = "/data/FiDi/clipped/";
 const DATA_YEAR = 2025;   // year in the Tmrt filenames
+const productionBackendUrl = 'http://127.0.0.1:8080/api/navigate';
 
 // Daylight hours you have data for, per month: [first hour, last hour]
 const HOURS_BY_MONTH = {
@@ -436,6 +437,106 @@ function mockRoutes(start, end, n = 5) {
   return routes;
 }
 
+//HI//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/* =========================================================
+   Real Route Fetcher (Replaces mockRoutes)
+   ========================================================= */
+
+async function fetchRealRoutes(start, end, month, hour) {
+    // Point this to your active local Flask server
+    const backendUrl = 'http://127.0.0.1:8080/api/navigate'; 
+
+    try {
+        const response = await fetch(backendUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                start_lat: start.lat, 
+                start_lon: start.lon,
+                end_lat: end.lat,
+                end_lon: end.lon,
+                month: month,
+                hour: hour
+            })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Failed to fetch routes");
+        }
+
+        const data = await response.json();
+        
+        // This takes the multiple routes returned from Python/Tiger Data
+        // and formats them exactly how your existing table and slider expect them!
+        return data.routes.map(r => ({
+            latlngs: r.coordinates, // Array of [lat, lon] points
+            duration: r.duration,   // Route duration in seconds
+            meanTmrt: r.mean_tmrt   // Mean temperature of the route
+        }));
+
+    } catch (error) {
+        console.error("Backend Error:", error);
+        message.textContent = "Error: " + error.message;
+        return null;
+    }
+}
+
+// Update the Route Button click listener to handle the real data request
+document.getElementById("routeBtn").addEventListener("click", async () => {
+  message.textContent = "Finding addresses...";
+
+  let start, end;
+  try {
+    [start, end] = await Promise.all([getPoint(startInput), getPoint(endInput)]);
+  } catch (err) {
+    message.textContent = "Something went wrong looking up those addresses.";
+    return;
+  }
+
+  if (!start || !end) {
+    message.textContent = "Couldn't find one of those addresses.";
+    return;
+  }
+
+  routeLayers.forEach((l) => map.removeLayer(l));
+  routeLayers = [];
+
+  routeLayers.push(
+    L.marker([start.lat, start.lon], { icon: startIcon }).addTo(map).bindPopup("Start"),
+    L.marker([end.lat, end.lon], { icon: endIcon }).addTo(map).bindPopup("End")
+  );
+
+  // Grab the exact month and hour active on your custom timeline picker
+  const currentMonth = selectedMonth();
+  const targetHour = currentHour;
+
+  message.textContent = "Calculating coolest paths...";
+  
+  // Call our new live database API function!
+  const realRoutes = await fetchRealRoutes(start, end, currentMonth, targetHour);
+  
+  if (!realRoutes || realRoutes.length === 0) {
+      if (!message.textContent) message.textContent = "No valid paths found.";
+      return;
+  }
+
+  candidateRoutes = realRoutes;
+  drawCandidateRoutes(candidateRoutes);
+  buildRouteSlider(candidateRoutes);
+
+  if (!inDataArea(start.lat, start.lon) || !inDataArea(end.lat, end.lon)) {
+    message.textContent = "Heads up: one of those addresses is outside the area we have shade data for.";
+  } else {
+    message.textContent = "";
+  }
+});
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 function drawCandidateRoutes(routes) {
   routeLineLayers.forEach(({ outline, line }) => {
     map.removeLayer(outline);
@@ -581,7 +682,7 @@ async function runRouting(start, end) {
     message.textContent = "";
   }
 }
-
+/*
 document.getElementById("routeBtn").addEventListener("click", async () => {
   message.textContent = "Finding addresses...";
 
@@ -609,13 +710,39 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
 
   await runRouting(start, end);
 });
+*/
 
+/*
 document.getElementById("updateTimeBtn").addEventListener("click", async () => {
   if (!lastStart || !lastEnd) return;
   message.textContent = "Recalculating...";
   await runRouting(lastStart, lastEnd);
+});*/
+
+
+document.getElementById("updateTimeBtn").addEventListener("click", async () => {
+  if (!lastStart || !lastEnd) return;
+  message.textContent = "Recalculating coolest paths...";
+
+  // Pull fresh month and hour metrics right from your custom ruler timeline
+  const currentMonth = selectedMonth();
+  const targetHour = currentHour;
+
+  // Query the live database endpoint
+  const realRoutes = await fetchRealRoutes(lastStart, lastEnd, currentMonth, targetHour);
+
+  if (!realRoutes || realRoutes.length === 0) {
+      message.textContent = "No valid paths found.";
+      return;
+  }
+
+  candidateRoutes = realRoutes;
+  drawCandidateRoutes(candidateRoutes);
+  buildRouteSlider(candidateRoutes);
+  message.textContent = "";
 });
 
+//################################################################################################################
 /* =========================================================
    Hour ruler
    ========================================================= */
