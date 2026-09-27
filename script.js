@@ -451,7 +451,7 @@ async function fetchRealRoutes(start, end, month, hour) {
     return data.routes.map(r => ({
       latlngs: r.coordinates, // Array of [lat, lon] points
       duration: r.duration,   // Route duration in seconds
-      meanTmrt: r.mean_tmrt   // Mean temperature of the route
+      meanTmrt: r.mean_tmrt,   // Mean temperature of the route
       distance: r.distance    
     }));
 
