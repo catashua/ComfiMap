@@ -482,3 +482,51 @@ body.no-blend .leaflet-tmrt-pane {
   font-weight: inherit;
   color: inherit;
 }
+
+/* ---------- Start/end route indicator ---------- */
+
+.route-inputs {
+  display: flex;
+  gap: 10px;
+}
+
+.route-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 12px;
+  flex-shrink: 0;
+  padding: 14px 0 16px;
+  box-sizing: border-box;
+}
+
+.indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: white;
+  flex-shrink: 0;
+}
+
+.indicator-line {
+  flex: 1;
+  width: 0;
+  border-left: 2px dotted #ccc;
+  margin: 4px 0;
+}
+
+.indicator-pin {
+  width: 15px;
+  height: 15px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--red);
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+
+.route-fields {
+  flex: 1;
+  min-width: 0;
+}
