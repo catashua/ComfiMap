@@ -22,6 +22,9 @@ const TMRT_MAX = 65;
 // Which base map opens first (must match a name in BASEMAPS below)
 const DEFAULT_BASEMAP = "OpenStreetMap (soft)";
 
+// Address suggestions are nudged towards this point (FiDi)
+const FIDI_CENTER = { lat: 40.7075, lon: -74.0110 };
+
 // Builds e.g. "Tmrt_2025_006_0500D.tif" for June 5 AM
 function tifName(month, hour) {
   const m = String(month).padStart(3, "0");
@@ -36,7 +39,7 @@ function tifName(month, hour) {
    ========================================================= */
 
 const map = L.map("map", { zoomControl: false, maxZoom: 20 })
-  .setView([40.7075, -74.0110], 17); // FiDi
+  .setView([FIDI_CENTER.lat, FIDI_CENTER.lon], 17);
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
 map.createPane("tmrt");
@@ -134,6 +137,7 @@ function tmrtColor(v) {
 let hourLayers = {};     // hour -> Leaflet layer, for the current month
 let loadedMonth = null;
 let firstFit = true;
+let dataBounds = null;   // the area covered by the Tmrt rasters
 
 async function loadTif(month, hour) {
   const res = await fetch(TIF_FOLDER + tifName(month, hour));
@@ -176,9 +180,10 @@ async function loadMonth(month) {
 
   message.textContent = failed.length ? `Couldn't load: ${failed.join(", ")}` : "";
 
-  if (firstFit) {
-    const anyLayer = Object.values(hourLayers)[0];
-    if (anyLayer) map.fitBounds(anyLayer.getBounds());
+  const anyLayer = Object.values(hourLayers)[0];
+  if (anyLayer) {
+    dataBounds = anyLayer.getBounds();
+    if (firstFit) map.fitBounds(dataBounds);
     firstFit = false;
   }
 
@@ -230,19 +235,161 @@ function hoursFor(month) {
 }
 
 /* =========================================================
-   Address -> coordinates + Route me! button
+   Address search + suggestions as you type
+   ========================================================= */
+
+const GEOSEARCH = "https://geosearch.planninglabs.nyc/v2";
+
+// "100 BROADWAY, New York, NY, USA" -> "100 Broadway"
+function prettyName(feature) {
+  const raw = feature.properties.name || feature.properties.label.split(",")[0];
+  return raw
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\bB'Way\b/g, "Broadway");
+}
+
+function inDataArea(lat, lon) {
+  return !dataBounds || dataBounds.contains([lat, lon]);
+}
+
+// Returns up to 6 places, nearest to FiDi and inside the shade data area first
+async function searchAddresses(text, endpoint = "autocomplete") {
+  const url = `${GEOSEARCH}/${endpoint}?text=${encodeURIComponent(text)}` +
+    `&focus.point.lat=${FIDI_CENTER.lat}&focus.point.lon=${FIDI_CENTER.lon}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const seen = new Set();
+  const places = [];
+  for (const f of data.features) {
+    const [lon, lat] = f.geometry.coordinates;
+    const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    if (seen.has(key)) continue;   // e.g. "B'WAY" and "BROADWAY" at the same spot
+    seen.add(key);
+    places.push({
+      name: prettyName(f),
+      detail: [f.properties.borough, f.properties.postalcode].filter(Boolean).join(" "),
+      lat,
+      lon,
+      inArea: inDataArea(lat, lon),
+    });
+  }
+  places.sort((a, b) => Number(b.inArea) - Number(a.inArea));
+  return places.slice(0, 6);
+}
+
+function attachAutocomplete(input, list) {
+  let items = [];
+  let active = -1;
+  let timer = null;
+  let requestId = 0;
+
+  function close() {
+    list.hidden = true;
+    items = [];
+    active = -1;
+  }
+
+  function render() {
+    list.innerHTML = "";
+    if (items.length === 0) return close();
+    items.forEach((place, i) => {
+      const li = document.createElement("li");
+      li.className = "suggestion" + (i === active ? " active" : "");
+
+      const name = document.createElement("span");
+      name.className = "suggestion-name";
+      name.textContent = place.name;
+
+      const detail = document.createElement("span");
+      detail.className = "suggestion-detail" + (place.inArea ? "" : " suggestion-outside");
+      detail.textContent = place.inArea ? place.detail : `${place.detail} · outside shade data area`;
+
+      li.append(name, detail);
+      // mousedown instead of click, so it fires before the text box loses focus
+      li.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        choose(i);
+      });
+      list.appendChild(li);
+    });
+    list.hidden = false;
+  }
+
+  function choose(i) {
+    const place = items[i];
+    input.value = place.name;
+    input.dataset.lat = place.lat;
+    input.dataset.lon = place.lon;
+    close();
+  }
+
+  input.addEventListener("input", () => {
+    delete input.dataset.lat;   // typing again means the old pick no longer applies
+    delete input.dataset.lon;
+    clearTimeout(timer);
+    const text = input.value.trim();
+    if (text.length < 2) return close();
+
+    // Wait until the user pauses typing for 200ms before searching
+    timer = setTimeout(async () => {
+      const id = ++requestId;
+      try {
+        const results = await searchAddresses(text);
+        if (id !== requestId) return;   // a newer search already started
+        items = results;
+        active = -1;
+        render();
+      } catch {
+        close();
+      }
+    }, 200);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    const open = !list.hidden && items.length > 0;
+    if (e.key === "ArrowDown" && open) {
+      e.preventDefault();
+      active = (active + 1) % items.length;
+      render();
+    } else if (e.key === "ArrowUp" && open) {
+      e.preventDefault();
+      active = (active - 1 + items.length) % items.length;
+      render();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (open) choose(active >= 0 ? active : 0);
+      else document.getElementById("routeBtn").click();
+    } else if (e.key === "Escape") {
+      close();
+    }
+  });
+
+  input.addEventListener("blur", () => setTimeout(close, 100));
+}
+
+const startInput = document.getElementById("start");
+const endInput = document.getElementById("end");
+attachAutocomplete(startInput, document.getElementById("startSuggestions"));
+attachAutocomplete(endInput, document.getElementById("endSuggestions"));
+
+// Uses the suggestion the user picked, or searches for whatever they typed
+async function getPoint(input) {
+  if (input.dataset.lat) {
+    return { lat: Number(input.dataset.lat), lon: Number(input.dataset.lon) };
+  }
+  const text = input.value.trim();
+  if (!text) return null;
+  const results = await searchAddresses(text, "search");
+  return results[0] ?? null;
+}
+
+/* =========================================================
+   Route me! button
    ========================================================= */
 
 let routeLayers = [];
-
-async function geocode(address) {
-  const url = "https://geosearch.planninglabs.nyc/v2/search?text=" + encodeURIComponent(address);
-  const res = await fetch(url);
-  const data = await res.json();
-  if (data.features.length === 0) return null;
-  const [lon, lat] = data.features[0].geometry.coordinates;
-  return { lat, lon };
-}
 
 // Draws a route with a white outline so it stands out on any base map and the heat colours
 function drawRoute(latlngs, color) {
@@ -253,13 +400,9 @@ function drawRoute(latlngs, color) {
 }
 
 document.getElementById("routeBtn").addEventListener("click", async () => {
-  const startText = document.getElementById("start").value;
-  const endText = document.getElementById("end").value;
-
   message.textContent = "Finding addresses...";
 
-  const start = await geocode(startText);
-  const end = await geocode(endText);
+  const [start, end] = await Promise.all([getPoint(startInput), getPoint(endInput)]);
 
   if (!start || !end) {
     message.textContent = "Couldn't find one of those addresses.";
@@ -278,7 +421,11 @@ document.getElementById("routeBtn").addEventListener("click", async () => {
   const line = drawRoute([[start.lat, start.lon], [end.lat, end.lon]], "#111");
   map.fitBounds(line.getBounds(), { padding: [60, 60] });
 
-  message.textContent = `Would route with route_${getTimeKey()}.gpkg`;
+  if (!inDataArea(start.lat, start.lon) || !inDataArea(end.lat, end.lon)) {
+    message.textContent = "Heads up: one of those addresses is outside the area we have shade data for.";
+  } else {
+    message.textContent = `Would route with route_${getTimeKey()}.gpkg`;
+  }
 });
 
 /* =========================================================
