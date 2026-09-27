@@ -113,8 +113,6 @@ L.control.layers(baseLayers, null, { position: "topright" }).addTo(map);
 map.on("baselayerchange", (e) => useBasemap(e.name));
 
 const message = document.getElementById("message");
-document.getElementById("legendMin").textContent = `${TMRT_MIN}°C`;
-document.getElementById("legendMax").textContent = `${TMRT_MAX}°C`;
 
 /* =========================================================
    Tmrt shadow layers

@@ -125,33 +125,6 @@ select,
   color: #b45309;
 }
 
-/* ---------- Legend ---------- */
-
-.legend { margin-top: 6px; }
-
-.legend-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 6px;
-}
-
-.legend-bar {
-  height: 10px;
-  border-radius: 5px;
-  background: linear-gradient(to right, #313695, #4575b4, #74add1, #fee090, #f46d43, #a50026);
-}
-
-.legend-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #777;
-  margin-top: 4px;
-}
-
-/* ---------- Bottom time bar ---------- */
-
 .time-bar {
   position: absolute;
   bottom: 24px;
