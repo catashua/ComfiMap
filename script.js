@@ -4,7 +4,7 @@
 
 const TIF_FOLDER = "/data/FiDi/clipped/";
 const DATA_YEAR = 2025;   // year in the Tmrt filenames
-const productionBackendUrl = 'https://comfimap.tech'; /*'https://comfimap-j3ocq.ondigitalocean.app/api/navigate';*/
+const productionBackendUrl = 'https://comfimap3-fh5ci.ondigitalocean.app/'; /*'https://comfimap-j3ocq.ondigitalocean.app/api/navigate';*/
 
 // Daylight hours you have data for, per month: [first hour, last hour]
 const HOURS_BY_MONTH = {
