@@ -46,42 +46,16 @@ U_COL = "u"
 V_COL = "v"
 
 
-def _round_coord(pt, precision):
-    return (round(pt[0], precision), round(pt[1], precision))
-
-
-def load_graph(gpkg_path, coord_precision=3, u_col=U_COL, v_col=V_COL):
+def load_graph(gpkg_path):
     """Load edges from the gpkg and build an undirected MultiGraph.
-
-    IMPORTANT: graph nodes are keyed by ROUNDED GEOMETRY COORDINATES, not by the
-    `u`/`v` id columns in the file. This dataset's `u`/`v` values turned out not to
-    be reliable node identifiers: long paths are frequently digitized as a run of
-    several short sub-segments (e.g. wherever the discomfort value changes along a
-    sidewalk), but every sub-segment in the run is tagged with the *same* `u`/`v`
-    pair -- the endpoints of the whole original path, not of that individual
-    fragment. That makes networkx see, say, 5 or 20 "parallel" edges directly
-    connecting two intersections that are actually a block apart, when in truth
-    they're 5-20 edges that must be walked in sequence to get from one to the
-    other. Picking "the shortest of the parallel edges" (a reasonable strategy for
-    genuinely parallel routes) then grabs one lone middle fragment that doesn't
-    touch either real endpoint -- which is exactly what produced the disjoint,
-    stranded line segments.
-
-    Building the graph from coordinates instead sidesteps this: every fragment's
-    own two endpoints become distinct nodes (rounded to `coord_precision` decimal
-    places -- i.e. millimeters in this UTM-projected data -- to absorb float
-    noise while still merging truly-identical points), so the graph topology
-    matches the physical network exactly, and there's no longer any ambiguity
-    about which fragment to use or which direction it runs.
 
     Each edge keeps its Shape_Leng (walking distance) and cd (discomfort) as
     attributes, plus the original geometry and row index so we can re-export
-    exact geometries later. The original `u`/`v` values are kept as attributes
-    too (orig_u/orig_v) for reference/debugging, but are not used for topology.
+    exact geometries later.
     """
     gdf = gpd.read_file(gpkg_path)
 
-    missing = [c for c in (u_col, v_col, LENGTH_COL, CD_COL) if c not in gdf.columns]
+    missing = [c for c in (U_COL, V_COL, LENGTH_COL, CD_COL) if c not in gdf.columns]
     if missing:
         raise ValueError(
             f"Input gpkg is missing expected column(s): {missing}. "
@@ -91,33 +65,21 @@ def load_graph(gpkg_path, coord_precision=3, u_col=U_COL, v_col=V_COL):
     G = nx.MultiGraph()
     G.graph["crs"] = gdf.crs
 
-    skipped = 0
     for idx, row in gdf.iterrows():
+        u, v = row[U_COL], row[V_COL]
         length = float(row[LENGTH_COL])
         cd = float(row[CD_COL])
         geom = row.geometry
 
+        # Track node coordinates from the geometry endpoints so we can snap
+        # arbitrary input coordinates to the nearest graph node later.
         line = _first_line(geom)
-        if line is None:
-            skipped += 1
-            continue
+        if line is not None:
+            coords = list(line.coords)
+            _set_node_coord(G, u, coords[0])
+            _set_node_coord(G, v, coords[-1])
 
-        coords = list(line.coords)
-        node_a = _round_coord(coords[0], coord_precision)
-        node_b = _round_coord(coords[-1], coord_precision)
-
-        for n, xy in ((node_a, coords[0]), (node_b, coords[-1])):
-            if n not in G.nodes:
-                G.add_node(n, x=xy[0], y=xy[1])
-
-        G.add_edge(
-            node_a, node_b, key=idx,
-            length=length, cd=cd, geometry=geom, row_index=idx,
-            orig_u=row[u_col], orig_v=row[v_col],
-        )
-
-    if skipped:
-        print(f"Warning: skipped {skipped} row(s) with unparseable geometry.")
+        G.add_edge(u, v, key=idx, length=length, cd=cd, geometry=geom, row_index=idx)
 
     return gdf, G
 
@@ -162,76 +124,10 @@ def transform_point(lon, lat, src_crs, dst_crs):
     return x, y
 
 
-def _line_endpoints(line):
-    c = list(line.coords)
-    return c[0], c[-1]
-
-
-def _points_close(p, q, tol):
-    return math.hypot(p[0] - q[0], p[1] - q[1]) <= tol
-
-
-def _chain_orient(lines, tol=1.0):
-    """Reorder each line's coordinates (reversing where needed) so that consecutive
-    lines physically touch end-to-start, forming one continuous path.
-
-    IMPORTANT: this does NOT trust any precomputed per-node coordinate (like the
-    one _set_node_coord builds during load_graph) to decide direction. That table
-    is unreliable here because the source data digitizes each edge's geometry in
-    whatever direction it happened to be drawn in -- not consistently from `u` to
-    `v` -- so "the first edge to mention node X wins its coordinate" can silently
-    record the WRONG endpoint for that node about half the time.
-
-    Instead, this looks at where each edge's raw geometry actually, physically
-    touches its neighbor's raw geometry in the path, and orients purely off of
-    that. This is what fixes the "disjoint zigzagging segments" bug: previously,
-    edges were concatenated in whatever direction they were originally digitized,
-    so roughly half of them ran backwards relative to the direction being walked,
-    and the drawn line jumped backward before jumping forward to the next segment.
-    """
-    if not lines:
-        return []
-    if len(lines) == 1:
-        return [lines[0]]
-
-    oriented = [None] * len(lines)
-
-    p0a, p0b = _line_endpoints(lines[0])
-    p1a, p1b = _line_endpoints(lines[1])
-    if _points_close(p0b, p1a, tol) or _points_close(p0b, p1b, tol):
-        oriented[0] = lines[0]
-    elif _points_close(p0a, p1a, tol) or _points_close(p0a, p1b, tol):
-        oriented[0] = LineString(list(lines[0].coords)[::-1])
-    else:
-        # No endpoint match within tolerance -- a genuine topology gap in the
-        # source data. Keep original orientation as a best-effort fallback.
-        oriented[0] = lines[0]
-
-    for i in range(1, len(lines)):
-        prev_end = _line_endpoints(oriented[i - 1])[1]
-        pa, pb = _line_endpoints(lines[i])
-        if _points_close(pa, prev_end, tol):
-            oriented[i] = lines[i]
-        elif _points_close(pb, prev_end, tol):
-            oriented[i] = LineString(list(lines[i].coords)[::-1])
-        else:
-            oriented[i] = lines[i]
-
-    return oriented
-
-
 def path_edge_ids(G, node_path):
     """Given a list of nodes, return the list of edge row_indexes used (choosing the
-    shortest parallel edge at each hop), a list of that edge's geometry *reoriented*
-    to chain continuously in path-of-travel order, plus totals for length and cd.
-
-    Reorienting here (once, at the source) means every downstream consumer -- the
-    exported .gpkg, the in-memory Flask response, the coordinate list built for
-    Leaflet -- can just concatenate geometries in path order and get a continuous
-    line, with no need to re-detect direction later.
-    """
+    shortest parallel edge at each hop), plus totals for length and cd."""
     edge_ids = []
-    raw_lines = []
     total_length = 0.0
     total_cd = 0.0
     for a, b in zip(node_path[:-1], node_path[1:]):
@@ -239,12 +135,9 @@ def path_edge_ids(G, node_path):
         parallel = G.get_edge_data(a, b)
         best_key, best_data = min(parallel.items(), key=lambda kv: kv[1]["length"])
         edge_ids.append(best_data["row_index"])
-        raw_lines.append(_first_line(best_data["geometry"]))
         total_length += best_data["length"]
         total_cd += best_data["cd"]
-
-    oriented_geoms = _chain_orient(raw_lines)
-    return edge_ids, oriented_geoms, total_length, total_cd
+    return edge_ids, total_length, total_cd
 
 
 def simplify_graph(G, weight="length"):
@@ -381,8 +274,8 @@ def find_paths_within_threshold(G, source, target, percent, max_paths=50, weight
 
     results = []
     for node_path in kept_node_paths:
-        edge_ids, oriented_geoms, total_length, total_cd = path_edge_ids(G, node_path)
-        results.append((node_path, edge_ids, oriented_geoms, total_length, total_cd))
+        edge_ids, total_length, total_cd = path_edge_ids(G, node_path)
+        results.append((node_path, edge_ids, total_length, total_cd))
 
     return results, first_length, threshold
 
@@ -392,14 +285,9 @@ def get_in_memory_paths(gdf, results):
     """Converts calculated paths into ready-to-filter GeoDataFrames."""
     path_dataframes = []
     
-    for i, (node_path, edge_ids, oriented_geoms, total_length, total_cd) in enumerate(results):
+    for i, (node_path, edge_ids, total_length, total_cd) in enumerate(results):
         sub = gdf.loc[edge_ids].reindex(edge_ids).copy()
-        # Overwrite with direction-corrected geometry (see path_edge_ids/_orient_line)
-        # so segments concatenate into one continuous line in path order, instead
-        # of the raw, arbitrarily-oriented digitized geometry.
-        sub["geometry"] = oriented_geoms
         sub["path_rank"] = i
-        sub["path_order"] = range(len(sub))
         sub["total_length"] = round(total_length, 3)
         sub["total_cd"] = round(total_cd, 4)
         
@@ -422,11 +310,8 @@ def export_paths(gdf, results, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     summary_rows = []
-    for i, (node_path, edge_ids, oriented_geoms, total_length, total_cd) in enumerate(results):
+    for i, (node_path, edge_ids, total_length, total_cd) in enumerate(results):
         sub = gdf.loc[edge_ids].copy()
-        # Overwrite with direction-corrected geometry so the exported .gpkg's
-        # segments already run in path order (see path_edge_ids/_orient_line).
-        sub["geometry"] = oriented_geoms
         sub["path_rank"] = i
         sub["path_order"] = range(len(sub))  # order along the path
 

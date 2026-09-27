@@ -4,7 +4,7 @@
 
 const TIF_FOLDER = "/data/FiDi/clipped/";
 const DATA_YEAR = 2025;   // year in the Tmrt filenames
-const productionBackendUrl = 'https://10.206.67.65';
+const productionBackendUrl = 'http://127.0.0.1:8080/api/navigate';
 
 // Daylight hours you have data for, per month: [first hour, last hour]
 const HOURS_BY_MONTH = {
@@ -445,7 +445,7 @@ function mockRoutes(start, end, n = 5) {
 
 async function fetchRealRoutes(start, end, month, hour) {
     // Point this to your active local Flask server
-    const backendUrl = 'https://10.206.67.65'; 
+    const backendUrl = 'http://127.0.0.1:8080/api/navigate'; 
 
     try {
         const response = await fetch(backendUrl, {

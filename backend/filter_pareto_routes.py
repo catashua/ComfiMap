@@ -164,12 +164,12 @@ def get_pareto_routes_coordinates(paths_list):
         })
     print("1")
     # SORT STEP: Sort the final optimal list by distance ascending (shortest first)
-    formatted_routes_output.sort(key=lambda r: -1*r["duration"])
+    formatted_routes_output.sort(key=lambda r: r["duration"])
     print("2")
     # Clean up the display names so that "Route Option 1" is always the shortest option
     for index, route in enumerate(formatted_routes_output):
         route["name"] = f"Route Option {index + 1}"
-    print("3")
+        print(f"dur: {route['duration']}: route: {route['coordinates']}")
     return formatted_routes_output
 
 

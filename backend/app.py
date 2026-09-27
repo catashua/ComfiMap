@@ -77,6 +77,38 @@ def navigate():
             max_paths=25,
             coords_crs="EPSG:4326"
         )
+
+        # 2. Map directly to memory coordinate lists cleanly using Shapely head-to-tail line merging
+        from shapely.ops import linemerge, unary_union
+
+        '''response_routes = []
+        for p in paths_generated:
+            gdf = p["gdf"]
+            
+            # Join the segment lines and sew them continuously in order
+            unified_multiline = unary_union(gdf.geometry.values)
+            continuous_line = linemerge(unified_multiline)
+            
+            route_coordinates = []
+            
+            # Extract points sequentially from the unified track
+            if continuous_line.geom_type == 'LineString':
+                for x, y in continuous_line.coords:
+                    route_coordinates.append([y, x]) # Flip to [Latitude, Longitude] for Leaflet
+            else:
+                # Fallback handler for true network gaps
+                for segment in continuous_line.geoms:
+                    for x, y in segment.coords:
+                        route_coordinates.append([y, x])
+
+            response_routes.append({
+                "name": f"Route Option {p['rank'] + 1}",
+                "coordinates": route_coordinates,
+                "duration": round(p["total_length"] / 1.4),
+                "mean_tmrt": round(p["total_cd"], 2),
+                "distance": p["total_length"]
+            })'''
+
         
         # 2. Extract the Pareto paths as standard coordinate sets
         response_routes = fpr.get_pareto_routes_coordinates(paths_generated)
